@@ -3,6 +3,7 @@
 ## Features
  - design-pattern
  - file
+ - socket
  - thread
 
 ## Supported Platforms

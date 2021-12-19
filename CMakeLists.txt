@@ -10,6 +10,7 @@ add_subdirectory(external_project)
 
 set(LIBRARY_LIST
 		file
+		socket
 		thread
 )
 func_make_integrate_library("common" "${LIBRARY_LIST}")
