@@ -22,6 +22,7 @@ set(DEPENDENCIES
 	)
 
 set(CONFIGURE_FILE_TEST
+		"test/test.h.in"
 	)
 
 func_build_library(${ALIAS_NAME} ${BUILD_TARGET} "${HEADER}" "${SOURCE}" "${DEPENDENCIES}")

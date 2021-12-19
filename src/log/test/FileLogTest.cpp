@@ -1,3 +1,5 @@
+#include "test.h"
+
 #include "../FileLog.h"
 
 #include "gtest/gtest.h"
@@ -59,37 +61,37 @@ static bool check(const E_LOG_LEVEL &eLogLevel, const bool &bThread)
 			{
 				strLocal, {
 							{E_LOG_LEVEL::DEBUG, ", DEBUG] :  (1) (a)\r\n"},
-							{E_LOG_LEVEL::DEBUG, ", DEBUG] :  (11) (aa) ("},
+							{E_LOG_LEVEL::DEBUG, ", DEBUG] :  (11) (aa) (" + GstrSourceDir + "/src/log/test/FileLogTest.cpp:23)\r\n"},
 
 							{E_LOG_LEVEL::INFO, ", INFO] :  (2) (b)\r\n"},
-							{E_LOG_LEVEL::INFO, ", INFO] :  (22) (bb) ("},
+							{E_LOG_LEVEL::INFO, ", INFO] :  (22) (bb) (" + GstrSourceDir + "/src/log/test/FileLogTest.cpp:28)\r\n"},
 
 							{E_LOG_LEVEL::WARNING, ", WARNING] :  (3) (c)\r\n"},
-							{E_LOG_LEVEL::WARNING, ", WARNING] :  (33) (cc) ("},
+							{E_LOG_LEVEL::WARNING, ", WARNING] :  (33) (cc) (" + GstrSourceDir + "/src/log/test/FileLogTest.cpp:33)\r\n"},
 
 							{E_LOG_LEVEL::ERROR, ", ERROR] :  (4) (d)\r\n"},
-							{E_LOG_LEVEL::ERROR, ", ERROR] :  (44) (dd) ("},
+							{E_LOG_LEVEL::ERROR, ", ERROR] :  (44) (dd) (" + GstrSourceDir + "/src/log/test/FileLogTest.cpp:38)\r\n"},
 
 							{E_LOG_LEVEL::CRITICAL, ", CRITICAL] :  (5) (e)\r\n"},
-							{E_LOG_LEVEL::CRITICAL, ", CRITICAL] :  (55) (ee) ("},
+							{E_LOG_LEVEL::CRITICAL, ", CRITICAL] :  (55) (ee) (" + GstrSourceDir + "/src/log/test/FileLogTest.cpp:43)\r\n"}
 					}
 			},
 			{
 				strGlobal, {
 							{E_LOG_LEVEL::DEBUG, ", DEBUG] :  (1) (a)\r\n"},
-							{E_LOG_LEVEL::DEBUG, ", DEBUG] :  (11) (aa) ("},
+							{E_LOG_LEVEL::DEBUG, ", DEBUG] :  (11) (aa) (" + GstrSourceDir + "/src/log/test/FileLogTest.cpp:25)\r\n"},
 
 							{E_LOG_LEVEL::INFO, ", INFO] :  (2) (b)\r\n"},
-							{E_LOG_LEVEL::INFO, ", INFO] :  (22) (bb) ("},
+							{E_LOG_LEVEL::INFO, ", INFO] :  (22) (bb) (" + GstrSourceDir + "/src/log/test/FileLogTest.cpp:30)\r\n"},
 
 							{E_LOG_LEVEL::WARNING, ", WARNING] :  (3) (c)\r\n"},
-							{E_LOG_LEVEL::WARNING, ", WARNING] :  (33) (cc) ("},
+							{E_LOG_LEVEL::WARNING, ", WARNING] :  (33) (cc) (" + GstrSourceDir + "/src/log/test/FileLogTest.cpp:35)\r\n"},
 
 							{E_LOG_LEVEL::ERROR, ", ERROR] :  (4) (d)\r\n"},
-							{E_LOG_LEVEL::ERROR, ", ERROR] :  (44) (dd) ("},
+							{E_LOG_LEVEL::ERROR, ", ERROR] :  (44) (dd) (" + GstrSourceDir + "/src/log/test/FileLogTest.cpp:40)\r\n"},
 
 							{E_LOG_LEVEL::CRITICAL, ", CRITICAL] :  (5) (e)\r\n"},
-							{E_LOG_LEVEL::CRITICAL, ", CRITICAL] :  (55) (ee) ("},
+							{E_LOG_LEVEL::CRITICAL, ", CRITICAL] :  (55) (ee) (" + GstrSourceDir + "/src/log/test/FileLogTest.cpp:45)\r\n"}
 					}
 			}
 		};
