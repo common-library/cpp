@@ -1,0 +1,6 @@
+#pragma once
+
+#include <string>
+using namespace std;
+
+static const string GstrConfigPath = "${PROJECT_SOURCE_DIR}/test_data/config";
