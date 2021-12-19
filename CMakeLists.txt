@@ -9,10 +9,11 @@ add_subdirectory(src)
 add_subdirectory(external_project)
 
 set(LIBRARY_LIST
-        file
+		file
+		thread
 )
 func_make_integrate_library("common" "${LIBRARY_LIST}")
 
 if(ENABLE_TEST)
-    func_make_coverage()
+	func_make_coverage()
 endif(ENABLE_TEST)
