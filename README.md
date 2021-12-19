@@ -3,6 +3,7 @@
 ## Features
  - design-pattern
  - file
+ - thread
 
 ## Supported Platforms
  - requires a compiler that conforms to the C++17 standard or higher.
