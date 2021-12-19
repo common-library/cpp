@@ -3,6 +3,7 @@
 ## Features
  - design-pattern
  - file
+ - json
  - queue
  - socket
  - thread
