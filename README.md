@@ -1,6 +1,7 @@
 # common-library-cpp
 
 ## Features
+ - design-pattern
  - file
 
 ## Supported Platforms
