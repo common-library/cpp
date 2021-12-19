@@ -44,8 +44,18 @@ function(func_build_library ALIAS_NAME BUILD_TARGET HEADER SOURCE DEPENDENCIES)
 	install_pkg_config(false ${BUILD_TARGET} "${HEADER}" "${DEPENDENCIES}")
 endfunction()
 
-function(func_build_unit_test TEST_BUILD_TARGET SOURCE_TEST SOURCE DEPENDENCIES)
+function(func_build_unit_test TEST_BUILD_TARGET SOURCE_TEST SOURCE DEPENDENCIES CONFIGURE_FILE)
 	if(ENABLE_TEST)
+		foreach(ITEM ${CONFIGURE_FILE})
+			string(LENGTH "${ITEM}" ITEM_SIZE)
+
+			math(EXPR DESTINATION_FILE_SIZE "${ITEM_SIZE} - 3")
+
+			string(SUBSTRING "${ITEM}" 0 ${DESTINATION_FILE_SIZE} DESTINATION_FILE)
+
+			configure_file("${ITEM}" "${CMAKE_CURRENT_SOURCE_DIR}/${DESTINATION_FILE}")
+		endforeach()
+
 		add_executable(${TEST_BUILD_TARGET} ${SOURCE_TEST} ${SOURCE})
 
 		set_target_properties(${TEST_BUILD_TARGET} PROPERTIES COMPILE_FLAGS ${CMAKE_CXX_FLAGS_COVERAGE})
@@ -72,7 +82,7 @@ function(func_make_coverage)
 	set(LCOV_FILE_BASE ${LCOV_FOLDER}/coverage.base)
 	set(LCOV_FILE_TEST ${LCOV_FOLDER}/coverage.test)
 	set(LCOV_FILE_TOTAL ${LCOV_FOLDER}/coverage.total)
-	set(LCOV_EXCEPT_PATH "*/usr/include/*" "*.h" "*/library/*" "*/test/main.cpp" "*Test.cpp")
+	set(LCOV_EXCEPT_PATH "*/usr/include/*" "*.h" "*/rabbit.hpp" "*/library/*" "*/test/main.cpp" "*Test.cpp")
 
 	add_custom_target(lcov_run
 			COMMAND rm -rf ${LCOV_FOLDER} ${COVERAGE_RESULT_FOLDER}

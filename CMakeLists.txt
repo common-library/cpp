@@ -9,6 +9,7 @@ add_subdirectory(src)
 add_subdirectory(external_project)
 
 set(LIBRARY_LIST
+		config
 		file
 		json
 		log
