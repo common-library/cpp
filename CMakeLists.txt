@@ -11,6 +11,7 @@ add_subdirectory(external_project)
 set(LIBRARY_LIST
 		file
 		json
+		log
 		queue
 		socket
 		thread

@@ -4,6 +4,7 @@
  - design-pattern
  - file
  - json
+ - log
  - queue
  - socket
  - thread
