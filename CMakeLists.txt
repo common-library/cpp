@@ -17,6 +17,7 @@ set(LIBRARY_LIST
 		queue
 		socket
 		thread
+		util
 )
 func_make_integrate_library("common" "${LIBRARY_LIST}")
 
