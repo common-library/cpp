@@ -13,6 +13,7 @@ set(LIBRARY_LIST
 		file
 		json
 		log
+		process
 		queue
 		socket
 		thread

@@ -6,6 +6,7 @@
  - file
  - json
  - log
+ - process
  - queue
  - socket
  - thread
