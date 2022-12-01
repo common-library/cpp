@@ -83,13 +83,13 @@ void ChildProcess::SetSignal() {
 	DEBUG_G(__PRETTY_FUNCTION__);
 
 	if (Singleton<EnvironmentVariable>::Instance().GetStandAlone()) {
-		sigset(SIGHUP, SIG_IGN);
-		sigset(SIGPIPE, SIG_IGN);
-		sigset(SIGCHLD, SIG_IGN);
-		sigset(SIGURG, SIG_IGN);
+		signal(SIGHUP, SIG_IGN);
+		signal(SIGPIPE, SIG_IGN);
+		signal(SIGCHLD, SIG_IGN);
+		signal(SIGURG, SIG_IGN);
 	}
 
-	sigset(SIGTERM, this->SigTerm);
+	signal(SIGTERM, this->SigTerm);
 }
 
 void ChildProcess::SigTerm(int iSig) {

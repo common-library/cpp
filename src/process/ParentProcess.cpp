@@ -124,7 +124,7 @@ bool ParentProcess::FinalizePidFile() {
 bool ParentProcess::FinalizeChildProcess() {
 	DEBUG_G(__PRETTY_FUNCTION__);
 
-	sigset(SIGCHLD, SIG_IGN);
+	signal(SIGCHLD, SIG_IGN);
 
 	if (Singleton<EnvironmentVariable>::Instance().GetStandAlone()) {
 		const pid_t childPid = Singleton<EnvironmentVariable>::Instance().GetChildPid();
@@ -153,7 +153,7 @@ bool ParentProcess::MakeDaemon() {
 		}
 
 		setsid();
-		sigset(SIGHUP, SIG_IGN);
+		signal(SIGHUP, SIG_IGN);
 
 		const int iPid2 = fork();
 		if (iPid2 == -1) {
@@ -231,17 +231,17 @@ void ParentProcess::SetSignal() {
 	DEBUG_G(__PRETTY_FUNCTION__);
 
 	if (Singleton<EnvironmentVariable>::Instance().GetStandAlone()) {
-		sigset(SIGHUP, SIG_IGN);
-		sigset(SIGPIPE, SIG_IGN);
-		sigset(SIGURG, SIG_IGN);
-		sigset(SIGINT, SIG_IGN);
+		signal(SIGHUP, SIG_IGN);
+		signal(SIGPIPE, SIG_IGN);
+		signal(SIGURG, SIG_IGN);
+		signal(SIGINT, SIG_IGN);
 
-		sigset(SIGCHLD, this->SigChild);
+		signal(SIGCHLD, this->SigChild);
 	} else {
-		sigset(SIGCHLD, SIG_IGN);
+		signal(SIGCHLD, SIG_IGN);
 	}
 
-	sigset(SIGTERM, this->SigTerm);
+	signal(SIGTERM, this->SigTerm);
 }
 
 void ParentProcess::SigChild(int iSig) {
