@@ -4,8 +4,7 @@
 
 #include "json_info.h"
 
-TEST(RabbitJsonTest, strJson1)
-{
+TEST(RabbitJsonTest, strJson1) {
 	RabbitJson rabbitJson;
 
 	check_json1_basic(rabbitJson);
@@ -15,8 +14,7 @@ TEST(RabbitJsonTest, strJson1)
 	check_json1_array2(rabbitJson);
 }
 
-TEST(RabbitJsonTest, strJson2)
-{
+TEST(RabbitJsonTest, strJson2) {
 	RabbitJson rabbitJson;
 
 	check_json2_basic(rabbitJson);

@@ -5,17 +5,21 @@
 #include "Json.h"
 
 class RabbitJson : public Json {
-private:
-	rabbit::document document;
-public:
-	RabbitJson() = default;
-	virtual ~RabbitJson() = default;
+	private:
+		rabbit::document document;
 
-	rabbit::object GetObject(const vector<string> &vecKey);
+	public:
+		RabbitJson() = default;
+		virtual ~RabbitJson() = default;
 
-	virtual bool Parsing(const string &strContents);
+		rabbit::object GetObject(const vector<string>& vecKey);
 
-	virtual JSON_VALUE_TYPE GetValue(const vector<string> &vecKey, const JSON_VALUE_TYPE &valueType);
+		virtual bool Parsing(const string& strContents);
 
-	virtual vector<map<string, JSON_VALUE_TYPE>> GetArray(const vector<string> &vecKey, const string &strArrayName, const map<string, JSON_VALUE_TYPE> &mapValueInfo);
+		virtual JSON_VALUE_TYPE GetValue(const vector<string>& vecKey,
+										 const JSON_VALUE_TYPE& valueType);
+
+		virtual vector<map<string, JSON_VALUE_TYPE>>
+		GetArray(const vector<string>& vecKey, const string& strArrayName,
+				 const map<string, JSON_VALUE_TYPE>& mapValueInfo);
 };

@@ -5,17 +5,21 @@
 #include "Json.h"
 
 class BoostJson : public Json {
-private:
-	boost::property_tree::ptree ptree;
-public:
-	BoostJson() = default;
-	virtual ~BoostJson() = default;
+	private:
+		boost::property_tree::ptree ptree;
 
-	string MakeKey(const vector<string> &vecKey) const;
+	public:
+		BoostJson() = default;
+		virtual ~BoostJson() = default;
 
-	virtual bool Parsing(const string &strContents);
+		string MakeKey(const vector<string>& vecKey) const;
 
-	virtual JSON_VALUE_TYPE GetValue(const vector<string> &vecKey, const JSON_VALUE_TYPE &valueType);
+		virtual bool Parsing(const string& strContents);
 
-	virtual vector<map<string, JSON_VALUE_TYPE>> GetArray(const vector<string> &vecKey, const string &strArrayName, const map<string, JSON_VALUE_TYPE> &mapValueInfo);
+		virtual JSON_VALUE_TYPE GetValue(const vector<string>& vecKey,
+										 const JSON_VALUE_TYPE& valueType);
+
+		virtual vector<map<string, JSON_VALUE_TYPE>>
+		GetArray(const vector<string>& vecKey, const string& strArrayName,
+				 const map<string, JSON_VALUE_TYPE>& mapValueInfo);
 };

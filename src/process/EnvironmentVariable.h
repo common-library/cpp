@@ -10,54 +10,55 @@ using namespace std;
 #include "Process.h"
 
 class EnvironmentVariable {
-private:
-	gid_t gid;
-	uid_t uid;
+	private:
+		gid_t gid;
+		uid_t uid;
 
-	pid_t parentPid;
-	pid_t childPid;
+		pid_t parentPid;
+		pid_t childPid;
 
-	bool bStandAlone;
+		bool bStandAlone;
 
-	string strConfigPath;
-	string strProcessName;
+		string strConfigPath;
+		string strProcessName;
 
-	atomic_bool bCondition;
+		atomic_bool bCondition;
 
-	vector<string> vecArgv;
+		vector<string> vecArgv;
 
-	map<E_PROCESS_TYPE, Process *> mapProcess;
+		map<E_PROCESS_TYPE, Process*> mapProcess;
 
-	bool InitializeOptions(int iArgc, char *pcArgv[]);
-	bool InitializeCurrentPath(const string &strWorkingPath);
-public:
-	EnvironmentVariable();
-	virtual ~EnvironmentVariable() = default;
+		bool InitializeOptions(int iArgc, char* pcArgv[]);
+		bool InitializeCurrentPath(const string& strWorkingPath);
 
-	bool Initialize(int iArgc, char *pcArgv[]);
-	bool InitializeLog();
+	public:
+		EnvironmentVariable();
+		virtual ~EnvironmentVariable() = default;
 
-	string Usage();
+		bool Initialize(int iArgc, char* pcArgv[]);
+		bool InitializeLog();
 
-	bool GetStandAlone();
-	string GetConfigPath();
-	string GetProcessName();
+		string Usage();
 
-	gid_t GetGid();
-	void SetGid(const gid_t &gid);
+		bool GetStandAlone();
+		string GetConfigPath();
+		string GetProcessName();
 
-	uid_t GetUid();
-	void SetUid(const uid_t &uid);
+		gid_t GetGid();
+		void SetGid(const gid_t& gid);
 
-	pid_t GetParentPid();
-	void SetParentPid(const pid_t &pid);
+		uid_t GetUid();
+		void SetUid(const uid_t& uid);
 
-	pid_t GetChildPid();
-	void SetChildPid(const pid_t &pid);
+		pid_t GetParentPid();
+		void SetParentPid(const pid_t& pid);
 
-	bool GetCondition();
-	void SetCondition(const bool &bCondition);
+		pid_t GetChildPid();
+		void SetChildPid(const pid_t& pid);
 
-	Process* GetProcess(const E_PROCESS_TYPE &eProcessType);
-	void SetProcess(const E_PROCESS_TYPE &eProcessType, Process *pProcess);
+		bool GetCondition();
+		void SetCondition(const bool& bCondition);
+
+		Process* GetProcess(const E_PROCESS_TYPE& eProcessType);
+		void SetProcess(const E_PROCESS_TYPE& eProcessType, Process* pProcess);
 };

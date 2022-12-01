@@ -1,7 +1,7 @@
 #pragma once
 
-#include <map>
 #include <condition_variable>
+#include <map>
 using namespace std;
 
 enum class E_PROCESS_TYPE {
@@ -10,21 +10,21 @@ enum class E_PROCESS_TYPE {
 };
 
 static const map<E_PROCESS_TYPE, string> GmapProcessInfo = {
-		{E_PROCESS_TYPE::PARENT, "PARENT"},
-		{E_PROCESS_TYPE::CHILD, "CHILD"},
-	};
+	{E_PROCESS_TYPE::PARENT, "PARENT"},
+	{E_PROCESS_TYPE::CHILD, "CHILD"},
+};
 
 class Process {
-private:
-	const E_PROCESS_TYPE eProcessType;
-protected:
+	private:
+		const E_PROCESS_TYPE eProcessType;
 
-public:
-	Process(const E_PROCESS_TYPE &eProcessType) : eProcessType(eProcessType) {};
-	virtual ~Process() = default;
+	protected:
+	public:
+		Process(const E_PROCESS_TYPE& eProcessType) : eProcessType(eProcessType){};
+		virtual ~Process() = default;
 
-	virtual bool Start() = 0;
-	virtual bool Stop() = 0;
+		virtual bool Start() = 0;
+		virtual bool Stop() = 0;
 
-	E_PROCESS_TYPE GetProcessType() {return this->eProcessType;}
+		E_PROCESS_TYPE GetProcessType() { return this->eProcessType; }
 };

@@ -1,46 +1,41 @@
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/poll.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
+#include <sys/poll.h>
+#include <unistd.h>
 
-#include <memory>
 #include <cstring>
+#include <memory>
 using namespace std;
 
 #include "DualIp.h"
 
 #include "SocketClient.h"
 
-SocketClient::SocketClient(const int &iFD, const int &iTimeOut)
-	: iFD(iFD), strAddress(""), iPort(-1), iTimeOut(iTimeOut)
-{
+SocketClient::SocketClient(const int& iFD, const int& iTimeOut)
+	: iFD(iFD), strAddress(""), iPort(-1), iTimeOut(iTimeOut) {
 	this->InitializeFromFD();
 }
 
-SocketClient::SocketClient(const string &strAddress, const in_port_t &iPort, const int &iTimeOut)
-	: iFD(-1), strAddress(strAddress), iPort(iPort), iTimeOut(iTimeOut)
-{
+SocketClient::SocketClient(const string& strAddress, const in_port_t& iPort,
+						   const int& iTimeOut)
+	: iFD(-1), strAddress(strAddress), iPort(iPort), iTimeOut(iTimeOut) {
 	this->InitializeFromAddress();
 }
 
-SocketClient::~SocketClient()
-{
-	this->Finalize();
-}
+SocketClient::~SocketClient() { this->Finalize(); }
 
-bool SocketClient::InitializeFromFD()
-{
-	if(this->iFD < 0) {
+bool SocketClient::InitializeFromFD() {
+	if (this->iFD < 0) {
 		return false;
 	}
 
-	if(this->SetFlags(O_NONBLOCK) == false) {
+	if (this->SetFlags(O_NONBLOCK) == false) {
 		return false;
 	}
 
 	sockaddr_in sSockAddrIn;
 	socklen_t sockLen = sizeof(sSockAddrIn);
-	getsockname(this->iFD, (struct sockaddr *)&sSockAddrIn, &sockLen);
+	getsockname(this->iFD, (struct sockaddr*)&sSockAddrIn, &sockLen);
 
 	this->strAddress = inet_ntoa(sSockAddrIn.sin_addr);
 	this->iPort = ntohs(sSockAddrIn.sin_port);
@@ -48,65 +43,61 @@ bool SocketClient::InitializeFromFD()
 	return this->SetPeerInfo();
 }
 
-bool SocketClient::InitializeFromAddress()
-{
-	if(this->Connect() == false) {
+bool SocketClient::InitializeFromAddress() {
+	if (this->Connect() == false) {
 		return false;
 	}
 
 	return this->SetPeerInfo();
 }
 
-bool SocketClient::Finalize()
-{
-	return this->DisConnect();
-}
+bool SocketClient::Finalize() { return this->DisConnect(); }
 
-bool SocketClient::InitPoll(pollfd &sPollFD, const short int &siFlags) const
-{
+bool SocketClient::InitPoll(pollfd& sPollFD, const short int& siFlags) const {
 	sPollFD.fd = this->iFD;
 	sPollFD.events = siFlags;
 	sPollFD.revents = 0;
 
-	const int iResult = poll(&sPollFD, 1, (this->iTimeOut) ? (this->iTimeOut * (1000)) : -1);
-	if(iResult == 0) {
+	const int iResult =
+		poll(&sPollFD, 1, (this->iTimeOut) ? (this->iTimeOut * (1000)) : -1);
+	if (iResult == 0) {
 		errno = ETIMEDOUT;
 		return false;
-	} else if(iResult == -1) {
+	} else if (iResult == -1) {
 		return false;
 	}
 
 	return true;
 }
 
-bool SocketClient::Poll(const short int &siFlags) const
-{
-	if(this->iFD < 0) {
+bool SocketClient::Poll(const short int& siFlags) const {
+	if (this->iFD < 0) {
 		return false;
 	}
 
 	pollfd sPollFD;
-	if(this->InitPoll(sPollFD, siFlags) == false) {
+	if (this->InitPoll(sPollFD, siFlags) == false) {
 		return false;
 	}
 
-	if((sPollFD.revents & POLLIN) || (sPollFD.revents & POLLRDNORM) ||
-			(sPollFD.revents & POLLRDBAND) || (sPollFD.revents & POLLPRI) ||
-			(sPollFD.revents & POLLOUT) || (sPollFD.revents & POLLWRNORM) ||
-			(sPollFD.revents & POLLWRBAND) || (sPollFD.revents & POLLERR)) {
+	if ((sPollFD.revents & POLLIN) || (sPollFD.revents & POLLRDNORM) ||
+		(sPollFD.revents & POLLRDBAND) || (sPollFD.revents & POLLPRI) ||
+		(sPollFD.revents & POLLOUT) || (sPollFD.revents & POLLWRNORM) ||
+		(sPollFD.revents & POLLWRBAND) || (sPollFD.revents & POLLERR)) {
 		int iError = 0;
 		socklen_t sockLen = sizeof(iError);
-		if(getsockopt(this->iFD, SOL_SOCKET, SO_ERROR, (void *)&iError, (socklen_t*)&sockLen) == -1) {
+		if (getsockopt(this->iFD, SOL_SOCKET, SO_ERROR, (void*)&iError,
+					   (socklen_t*)&sockLen) == -1) {
 			return false;
 		}
 
-		if(iError) {
+		if (iError) {
 			errno = iError;
 			return false;
 		}
-	} else if(sPollFD.revents & POLLNVAL) {
+	} else if (sPollFD.revents & POLLNVAL) {
 		return false;
-	} else if(sPollFD.revents & POLLHUP) {
+	} else if (sPollFD.revents & POLLHUP) {
 		return false;
 	} else {
 		return false;
@@ -115,38 +106,38 @@ bool SocketClient::Poll(const short int &siFlags) const
 	return true;
 }
 
-bool SocketClient::Poll(char *pcBuffer, const int &iBufferLen, int &iResultLen, const short int &siFlags) const
-{
-	if(this->iFD < 0) {
+bool SocketClient::Poll(char* pcBuffer, const int& iBufferLen, int& iResultLen,
+						const short int& siFlags) const {
+	if (this->iFD < 0) {
 		return false;
 	}
 
-	if(pcBuffer == nullptr || iBufferLen <= 0) {
+	if (pcBuffer == nullptr || iBufferLen <= 0) {
 		return false;
 	}
 
 	iResultLen = 0;
 
-	if(siFlags & POLLIN) {
+	if (siFlags & POLLIN) {
 		memset(pcBuffer, 0x00, iBufferLen);
 	}
 
 	pollfd sPollFD;
-	if(this->InitPoll(sPollFD, siFlags) == false) {
+	if (this->InitPoll(sPollFD, siFlags) == false) {
 		return false;
 	}
 
-	if(sPollFD.revents & siFlags) {
-		if(siFlags & POLLIN) {
+	if (sPollFD.revents & siFlags) {
+		if (siFlags & POLLIN) {
 			return this->PollIn(pcBuffer, iBufferLen, iResultLen, siFlags);
-		} else if(siFlags & POLLOUT) {
+		} else if (siFlags & POLLOUT) {
 			return this->PollOut(pcBuffer, iBufferLen, iResultLen, siFlags);
 		}
-	} else if(sPollFD.revents & POLLERR) {
+	} else if (sPollFD.revents & POLLERR) {
 		return false;
-	} else if(sPollFD.revents & POLLNVAL) {
+	} else if (sPollFD.revents & POLLNVAL) {
 		return false;
-	} else if(sPollFD.revents & POLLHUP) {
+	} else if (sPollFD.revents & POLLHUP) {
 		return false;
 	} else {
 		return false;
@@ -155,15 +146,15 @@ bool SocketClient::Poll(char *pcBuffer, const int &iBufferLen, int &iResultLen, 
 	return true;
 }
 
-bool SocketClient::PollIn(char *pcBuffer, const int &iBufferLen, int &iResultLen, const short int &siFlags) const
-{
+bool SocketClient::PollIn(char* pcBuffer, const int& iBufferLen, int& iResultLen,
+						  const short int& siFlags) const {
 	ssize_t iSize = -1;
-	while((iSize = read(this->iFD, pcBuffer, iBufferLen)) == -1) {
-		if(errno == EINTR) {
+	while ((iSize = read(this->iFD, pcBuffer, iBufferLen)) == -1) {
+		if (errno == EINTR) {
 			continue;
-		} else if(errno == EAGAIN || errno == EINPROGRESS || errno == EWOULDBLOCK) {
+		} else if (errno == EAGAIN || errno == EINPROGRESS || errno == EWOULDBLOCK) {
 			pollfd sPollFD;
-			if(this->InitPoll(sPollFD, siFlags) == false) {
+			if (this->InitPoll(sPollFD, siFlags) == false) {
 				return false;
 			}
 
@@ -173,7 +164,7 @@ bool SocketClient::PollIn(char *pcBuffer, const int &iBufferLen, int &iResultLen
 		break;
 	}
 
-	if(iSize == 0 || iSize == -1) {
+	if (iSize == 0 || iSize == -1) {
 		return false;
 	}
 
@@ -183,16 +174,16 @@ bool SocketClient::PollIn(char *pcBuffer, const int &iBufferLen, int &iResultLen
 	return true;
 }
 
-bool SocketClient::PollOut(char *pcBuffer, const int &iBufferLen, int &iResultLen, const short int &siFlags) const
-{
-	while(iResultLen < iBufferLen) {
+bool SocketClient::PollOut(char* pcBuffer, const int& iBufferLen, int& iResultLen,
+						   const short int& siFlags) const {
+	while (iResultLen < iBufferLen) {
 		ssize_t iSize = write(this->iFD, pcBuffer + iResultLen, iBufferLen - iResultLen);
-		if(iSize == 0) {
+		if (iSize == 0) {
 			return true;
-		} else if(iSize == -1) {
-			if(errno == EAGAIN || errno == EWOULDBLOCK) {
+		} else if (iSize == -1) {
+			if (errno == EAGAIN || errno == EWOULDBLOCK) {
 				pollfd sPollFD;
-				if(this->InitPoll(sPollFD, siFlags) == false) {
+				if (this->InitPoll(sPollFD, siFlags) == false) {
 					return false;
 				}
 
@@ -208,21 +199,20 @@ bool SocketClient::PollOut(char *pcBuffer, const int &iBufferLen, int &iResultLe
 	return true;
 }
 
-bool SocketClient::Connect()
-{
-	if(this->strAddress.empty() || this->iPort < 0) {
+bool SocketClient::Connect() {
+	if (this->strAddress.empty() || this->iPort < 0) {
 		return false;
 	}
 
 	DualIp dualIp(this->strAddress, this->iPort);
-	if(dualIp.Valid() == false) {
+	if (dualIp.Valid() == false) {
 		return false;
 	}
 
 	bool bConnect = false;
-	addrinfo *psAddrInfo = dualIp.GetAddrInfo();
-	while(psAddrInfo) {
-		if(this->Connect(psAddrInfo)) {
+	addrinfo* psAddrInfo = dualIp.GetAddrInfo();
+	while (psAddrInfo) {
+		if (this->Connect(psAddrInfo)) {
 			bConnect = true;
 			break;
 		}
@@ -230,7 +220,7 @@ bool SocketClient::Connect()
 		psAddrInfo = psAddrInfo->ai_next;
 	}
 
-	if(bConnect == false) {
+	if (bConnect == false) {
 		this->DisConnect();
 
 		return false;
@@ -239,39 +229,39 @@ bool SocketClient::Connect()
 	return true;
 }
 
-bool SocketClient::Connect(addrinfo *psAddrInfo)
-{
+bool SocketClient::Connect(addrinfo* psAddrInfo) {
 	this->DisConnect();
 
-	this->iFD = socket(psAddrInfo->ai_family, psAddrInfo->ai_socktype, psAddrInfo->ai_protocol);
-	if(this->iFD == -1) {
+	this->iFD =
+		socket(psAddrInfo->ai_family, psAddrInfo->ai_socktype, psAddrInfo->ai_protocol);
+	if (this->iFD == -1) {
 		return false;
 	}
 
-	if(this->SetFlags(O_NONBLOCK) == false) {
+	if (this->SetFlags(O_NONBLOCK) == false) {
 		return false;
 	}
 
-	if(connect(this->iFD, psAddrInfo->ai_addr, psAddrInfo->ai_addrlen) == 0) {
+	if (connect(this->iFD, psAddrInfo->ai_addr, psAddrInfo->ai_addrlen) == 0) {
 		return true;
 	}
 
-	if(errno != EINPROGRESS && errno != EWOULDBLOCK) {
+	if (errno != EINPROGRESS && errno != EWOULDBLOCK) {
 		return false;
 	}
 
-	const short int iFlags = POLLIN | POLLRDNORM | POLLRDBAND | POLLPRI | POLLOUT | POLLWRNORM | POLLWRBAND | POLLERR | POLLHUP | POLLNVAL;
-	if(this->Poll(iFlags) == false) {
+	const short int iFlags = POLLIN | POLLRDNORM | POLLRDBAND | POLLPRI | POLLOUT |
+							 POLLWRNORM | POLLWRBAND | POLLERR | POLLHUP | POLLNVAL;
+	if (this->Poll(iFlags) == false) {
 		return false;
 	}
 
 	return true;
 }
 
-bool SocketClient::DisConnect()
-{
+bool SocketClient::DisConnect() {
 	int iResult = 0;
-	if(this->iFD >= 0) {
+	if (this->iFD >= 0) {
 		iResult = close(this->iFD);
 		this->iFD = -1;
 	}
@@ -279,14 +269,13 @@ bool SocketClient::DisConnect()
 	return iResult == 0 ? true : false;
 }
 
-string SocketClient::ReadGarbage() const
-{
+string SocketClient::ReadGarbage() const {
 	bool bEnd = false;
 	string strRead = "";
 
-	while(bEnd == false) {
+	while (bEnd == false) {
 		string strTemp = "";
-		if(this->Read(strTemp, 1024, bEnd) == false) {
+		if (this->Read(strTemp, 1024, bEnd) == false) {
 			break;
 		}
 
@@ -296,8 +285,7 @@ string SocketClient::ReadGarbage() const
 	return strRead;
 }
 
-bool SocketClient::Read(string &strRead, const int &iReadLen, bool &bEnd) const
-{
+bool SocketClient::Read(string& strRead, const int& iReadLen, bool& bEnd) const {
 	int iResultLen = 0;
 
 	unique_ptr<char[]> uniqRead = make_unique<char[]>(iReadLen);
@@ -309,12 +297,12 @@ bool SocketClient::Read(string &strRead, const int &iReadLen, bool &bEnd) const
 	return bResult;
 }
 
-bool SocketClient::Read(char *pcRead, const int &iReadLen, int &iResultLen, bool &bEnd) const
-{
+bool SocketClient::Read(char* pcRead, const int& iReadLen, int& iResultLen,
+						bool& bEnd) const {
 	bEnd = false;
 	const bool bResult = this->Poll(pcRead, iReadLen, iResultLen, POLLIN | POLLRDNORM);
-	if(bResult) {
-		if(pcRead[iResultLen -2] == '\r' && pcRead[iResultLen -1] == '\n') {
+	if (bResult) {
+		if (pcRead[iResultLen - 2] == '\r' && pcRead[iResultLen - 1] == '\n') {
 			bEnd = true;
 		}
 	}
@@ -322,42 +310,36 @@ bool SocketClient::Read(char *pcRead, const int &iReadLen, int &iResultLen, bool
 	return bResult;
 }
 
-bool SocketClient::Write(const string &strWrite) const
-{
+bool SocketClient::Write(const string& strWrite) const {
 	int iResultLen = 0;
 
 	return this->Write(strWrite.c_str(), strWrite.size(), iResultLen);
 }
 
-bool SocketClient::Write(const char * const pcWrite, const int &iWriteLen, int &iResultLen) const
-{
-	return this->Poll((char *)pcWrite, iWriteLen, iResultLen, POLLOUT | POLLWRNORM);
+bool SocketClient::Write(const char* const pcWrite, const int& iWriteLen,
+						 int& iResultLen) const {
+	return this->Poll((char*)pcWrite, iWriteLen, iResultLen, POLLOUT | POLLWRNORM);
 }
 
-short int SocketClient::GetFlags()
-{
-	return fcntl(this->iFD, F_GETFL, 0);
-}
+short int SocketClient::GetFlags() { return fcntl(this->iFD, F_GETFL, 0); }
 
-bool SocketClient::SetFlags(const short int &siFlags)
-{
-	if(fcntl(this->iFD, F_SETFL, this->GetFlags() | siFlags) == -1) {
+bool SocketClient::SetFlags(const short int& siFlags) {
+	if (fcntl(this->iFD, F_SETFL, this->GetFlags() | siFlags) == -1) {
 		return false;
 	}
 
 	return true;
 }
 
-bool SocketClient::SetPeerInfo()
-{
-	if(this->iFD < 0) {
+bool SocketClient::SetPeerInfo() {
+	if (this->iFD < 0) {
 		return false;
 	}
 
 	sockaddr_in sSockAddrIn;
 	socklen_t sockLen = sizeof(sSockAddrIn);
 
-	getpeername(this->iFD, (sockaddr *)&sSockAddrIn, &sockLen);
+	getpeername(this->iFD, (sockaddr*)&sSockAddrIn, &sockLen);
 
 	this->strPeerAddress = inet_ntoa(sSockAddrIn.sin_addr);
 	this->iPeerPort = sSockAddrIn.sin_port;
@@ -365,12 +347,6 @@ bool SocketClient::SetPeerInfo()
 	return true;
 }
 
-string SocketClient::GetPeerAddress() const
-{
-	return this->strPeerAddress;
-}
+string SocketClient::GetPeerAddress() const { return this->strPeerAddress; }
 
-in_port_t SocketClient::GetPeerPort() const
-{
-	return this->iPeerPort;
-}
+in_port_t SocketClient::GetPeerPort() const { return this->iPeerPort; }

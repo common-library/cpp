@@ -5,17 +5,15 @@ using namespace std;
 
 #include "gtest/gtest.h"
 
-TEST(SocketServerTest, Start)
-{
+TEST(SocketServerTest, Start) {
 	SocketServer socketServer;
 
 	EXPECT_FALSE(socketServer.Start(-1, 0, 0, nullptr));
 
-	auto serverJobFunc = [] (const SocketClient &socketClient) {
-	};
+	auto serverJobFunc = [](const SocketClient& socketClient) {};
 
 	bool bServerResult = false;
-	auto serverThreadFunc = [&] () {
+	auto serverThreadFunc = [&]() {
 		bServerResult = socketServer.Start(12345, 3, 1, serverJobFunc);
 	};
 
@@ -30,8 +28,7 @@ TEST(SocketServerTest, Start)
 	EXPECT_TRUE(bServerResult);
 }
 
-TEST(SocketServerTest, Stop)
-{
+TEST(SocketServerTest, Stop) {
 	SocketServer socketServer;
 
 	EXPECT_TRUE(socketServer.Stop());

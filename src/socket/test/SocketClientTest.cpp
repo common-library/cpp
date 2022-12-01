@@ -11,9 +11,8 @@ static const string strGreeting = "greeting\r\n";
 static const string strWrite = "test line\r\n";
 static const string strPrefixResponse = "[response] ";
 
-TEST(SocketClientTest, ReadGarbage)
-{
-	auto serverJobFunc = [](const SocketClient &socketClient) {
+TEST(SocketClientTest, ReadGarbage) {
+	auto serverJobFunc = [](const SocketClient& socketClient) {
 		EXPECT_TRUE(socketClient.Write(strGreeting));
 
 		bool bEnd = false;
@@ -56,9 +55,8 @@ TEST(SocketClientTest, ReadGarbage)
 	EXPECT_TRUE(bServerResult);
 }
 
-TEST(SocketClientTest, GetPeerAddress)
-{
-	auto serverJobFunc = [](const SocketClient &socketClient) {
+TEST(SocketClientTest, GetPeerAddress) {
+	auto serverJobFunc = [](const SocketClient& socketClient) {
 		EXPECT_STREQ(socketClient.GetPeerAddress().c_str(), "127.0.0.1");
 
 		EXPECT_TRUE(socketClient.Write(strGreeting));
@@ -66,9 +64,7 @@ TEST(SocketClientTest, GetPeerAddress)
 
 	SocketServer socketServer;
 
-	auto serverThreadFunc = [&]() {
-		socketServer.Start(12345, 3, 1, serverJobFunc);
-	};
+	auto serverThreadFunc = [&]() { socketServer.Start(12345, 3, 1, serverJobFunc); };
 
 	thread serverThread(serverThreadFunc);
 
@@ -86,9 +82,8 @@ TEST(SocketClientTest, GetPeerAddress)
 	serverThread.join();
 }
 
-TEST(SocketClientTest, GetPeerPort)
-{
-	auto serverJobFunc = [](const SocketClient &socketClient) {
+TEST(SocketClientTest, GetPeerPort) {
+	auto serverJobFunc = [](const SocketClient& socketClient) {
 		EXPECT_NE(socketClient.GetPeerPort(), -1);
 
 		EXPECT_TRUE(socketClient.Write(strGreeting));
@@ -96,9 +91,7 @@ TEST(SocketClientTest, GetPeerPort)
 
 	SocketServer socketServer;
 
-	auto serverThreadFunc = [&]() {
-		socketServer.Start(12345, 3, 1, serverJobFunc);
-	};
+	auto serverThreadFunc = [&]() { socketServer.Start(12345, 3, 1, serverJobFunc); };
 
 	thread serverThread(serverThreadFunc);
 
@@ -116,9 +109,8 @@ TEST(SocketClientTest, GetPeerPort)
 	serverThread.join();
 }
 
-TEST(SocketClientTest, Total_char)
-{
-	auto serverJobFunc = [](const SocketClient &socketClient) {
+TEST(SocketClientTest, Total_char) {
+	auto serverJobFunc = [](const SocketClient& socketClient) {
 		int iResultLen = 0;
 
 		bool bResult = false;
@@ -133,7 +125,7 @@ TEST(SocketClientTest, Total_char)
 		EXPECT_EQ(iResultLen, strlen(caBuffer));
 		EXPECT_STREQ(caBuffer, strWrite.c_str());
 
-		const string strResponse = strPrefixResponse + caBuffer;	
+		const string strResponse = strPrefixResponse + caBuffer;
 		bResult = socketClient.Write(strResponse.c_str(), strResponse.size(), iResultLen);
 		EXPECT_TRUE(bResult);
 		EXPECT_EQ(iResultLen, strResponse.size());
@@ -178,9 +170,8 @@ TEST(SocketClientTest, Total_char)
 	EXPECT_TRUE(bServerResult);
 }
 
-TEST(SocketClientTest, total_string)
-{
-	auto serverJobFunc = [](const SocketClient &socketClient) {
+TEST(SocketClientTest, total_string) {
+	auto serverJobFunc = [](const SocketClient& socketClient) {
 		EXPECT_TRUE(socketClient.Write(strGreeting));
 
 		bool bEnd = false;

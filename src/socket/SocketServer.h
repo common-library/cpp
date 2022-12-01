@@ -1,31 +1,33 @@
 #pragma once
 
-#include <mutex>
 #include <atomic>
 #include <functional>
+#include <mutex>
 using namespace std;
 
 #include "SocketClient.h"
 
 class SocketServer {
-private:
-	mutex mutexLock;
-	atomic<bool> bStart;
+	private:
+		mutex mutexLock;
+		atomic<bool> bStart;
 
-	int iFD;
+		int iFD;
 
-	bool Create();
-	bool Bind(const int &iPort);
-	bool Listen(const int &iListenQueueLen);
-	bool Accept(int &iClientFD);
+		bool Create();
+		bool Bind(const int& iPort);
+		bool Listen(const int& iListenQueueLen);
+		bool Accept(int& iClientFD);
 
-	bool Open(const int &iPort, const int &iListenQueueLen = 1024);
-	bool Close();
-public:
-	SocketServer();
-	virtual ~SocketServer();
+		bool Open(const int& iPort, const int& iListenQueueLen = 1024);
+		bool Close();
 
-	bool Start(const int &iPort, const int iTimeOut, const int iJobPoolSize, const function<void(const SocketClient &socketClient)> &jobFunc);
+	public:
+		SocketServer();
+		virtual ~SocketServer();
 
-	bool Stop();
+		bool Start(const int& iPort, const int iTimeOut, const int iJobPoolSize,
+				   const function<void(const SocketClient& socketClient)>& jobFunc);
+
+		bool Stop();
 };

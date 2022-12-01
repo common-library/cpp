@@ -5,23 +5,24 @@
 #include "Config.h"
 
 class CommonConfig : public Config {
-private:
-	string strWorkingPath;
+	private:
+		string strWorkingPath;
 
-	E_LOG_LEVEL eLogLevel;
-	bool bThreadMode;
-	string strLogOutputPath;
-	string strLogFileNamePrefix;
+		E_LOG_LEVEL eLogLevel;
+		bool bThreadMode;
+		string strLogOutputPath;
+		string strLogFileNamePrefix;
 
-	virtual bool InitializeDerived();
-public:
-	CommonConfig();
-	virtual ~CommonConfig() = default;
+		virtual bool InitializeDerived();
 
-	string GetWorkingPath();
+	public:
+		CommonConfig();
+		virtual ~CommonConfig() = default;
 
-	E_LOG_LEVEL GetLogLevel();
-	bool GetThreadMode();
-	string GetLogOutputPath();
-	string GetLogFileNamePrefix();
+		string GetWorkingPath();
+
+		E_LOG_LEVEL GetLogLevel();
+		bool GetThreadMode();
+		string GetLogOutputPath();
+		string GetLogFileNamePrefix();
 };

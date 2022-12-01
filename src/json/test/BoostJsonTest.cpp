@@ -4,8 +4,7 @@
 
 #include "json_info.h"
 
-TEST(BoostJsonTest, strJson1)
-{
+TEST(BoostJsonTest, strJson1) {
 	BoostJson boostJson;
 
 	check_json1_basic(boostJson);
@@ -15,8 +14,7 @@ TEST(BoostJsonTest, strJson1)
 	check_json1_array2(boostJson);
 }
 
-TEST(BoostJsonTest, strJson2)
-{
+TEST(BoostJsonTest, strJson2) {
 	BoostJson boostJson;
 
 	check_json2_basic(boostJson);

@@ -4,8 +4,7 @@
 
 #include "json_info.h"
 
-TEST(RapidjsonJsonTest, strJson1)
-{
+TEST(RapidjsonJsonTest, strJson1) {
 	RapidjsonJson rapidjsonJson;
 
 	check_json1_basic(rapidjsonJson);
@@ -15,8 +14,7 @@ TEST(RapidjsonJsonTest, strJson1)
 	check_json1_array2(rapidjsonJson);
 }
 
-TEST(RapidjsonJsonTest, strJson2)
-{
+TEST(RapidjsonJsonTest, strJson2) {
 	RapidjsonJson rapidjsonJson;
 
 	check_json2_basic(rapidjsonJson);

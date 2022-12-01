@@ -5,18 +5,22 @@
 #include "Json.h"
 
 class RapidjsonJson : public Json {
-private:
-	rapidjson::Document document;
-	rapidjson::Document documentOrg;
-public:
-	RapidjsonJson() = default;
-	virtual ~RapidjsonJson() = default;
+	private:
+		rapidjson::Document document;
+		rapidjson::Document documentOrg;
 
-	rapidjson::Value& GetTopValue(const vector<string> &vecKey);
+	public:
+		RapidjsonJson() = default;
+		virtual ~RapidjsonJson() = default;
 
-	virtual bool Parsing(const string &strContents);
+		rapidjson::Value& GetTopValue(const vector<string>& vecKey);
 
-	virtual JSON_VALUE_TYPE GetValue(const vector<string> &vecKey, const JSON_VALUE_TYPE &valueType);
+		virtual bool Parsing(const string& strContents);
 
-	virtual vector<map<string, JSON_VALUE_TYPE>> GetArray(const vector<string> &vecKey, const string &strArrayName, const map<string, JSON_VALUE_TYPE> &mapValueInfo);
+		virtual JSON_VALUE_TYPE GetValue(const vector<string>& vecKey,
+										 const JSON_VALUE_TYPE& valueType);
+
+		virtual vector<map<string, JSON_VALUE_TYPE>>
+		GetArray(const vector<string>& vecKey, const string& strArrayName,
+				 const map<string, JSON_VALUE_TYPE>& mapValueInfo);
 };
