@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+
 using namespace std;
 
-static const string GstrSourceDir = "${PROJECT_SOURCE_DIR}";
+static const string PROJECT_SOURCE_DIR = "${PROJECT_SOURCE_DIR}";

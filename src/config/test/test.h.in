@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+
 using namespace std;
 
-static const string GstrConfigPath = "${PROJECT_SOURCE_DIR}/test_data/config";
+static const string CONFIG_PATH = "${PROJECT_SOURCE_DIR}/test_data/config";

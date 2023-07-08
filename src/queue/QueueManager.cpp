@@ -1,43 +1,24 @@
-#include <memory>
+#include "QueueManager.h"
+#include <mutex>
+#include <string>
+
 using namespace std;
 
-#include "QueueManager.h"
+void QueueManager::Clear() {
+	lock_guard<mutex> lock(this->mutexForKey);
 
-QueueManager::QueueManager()
-{
-	for(const auto &iter : GmapQueueTypeInfo) {
-//		this->mapMutex.emplace(iter.first, unique_ptr<mutex>(new mutex()));
-		this->mapMutex.emplace(iter.first, make_unique<mutex>());
-	}
+	this->queueByKey.clear();
+	this->mutexByKey.clear();
 }
 
-void QueueManager::Pop(const E_QUEUE_TYPE &eType)
-{
-	lock_guard<mutex> lock(*this->mapMutex.at(eType));
+void QueueManager::Clear(const string &key) {
+	lock_guard<mutex> lock(this->mutexForKey);
 
-	if(this->mapQueue[eType].empty()) {
-		return;
-	}
-
-	this->mapQueue[eType].pop();
+	this->queueByKey.erase(key);
+	this->mutexByKey.erase(key);
 }
 
-bool QueueManager::Empty(const E_QUEUE_TYPE &eType)
-{
-	lock_guard<mutex> lock(*this->mapMutex.at(eType));
-
-	return this->mapQueue[eType].empty();
-}
-
-int QueueManager::Size(const E_QUEUE_TYPE &eType)
-{
-	lock_guard<mutex> lock(*this->mapMutex.at(eType));
-
-	return this->mapQueue[eType].size();
-}
-
-QueueManager& QueueManager::Instance()
-{
+QueueManager &QueueManager::Instance() {
 	static QueueManager instance;
 	return instance;
-}
+};

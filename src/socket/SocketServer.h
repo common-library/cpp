@@ -1,31 +1,35 @@
 #pragma once
 
-#include <mutex>
+#include "SocketClient.h"
+#include "ThreadPool.h"
 #include <atomic>
 #include <functional>
+#include <netinet/in.h>
+
 using namespace std;
 
-#include "SocketClient.h"
-
 class SocketServer {
-private:
-	mutex mutexLock;
-	atomic<bool> bStart;
+	private:
+		int fd;
+		atomic_bool start;
+		ThreadPool threadPool;
 
-	int iFD;
+		bool Open(const in_port_t &port, const int &listenQueueLen = 1024);
+		bool Close();
 
-	bool Create();
-	bool Bind(const int &iPort);
-	bool Listen(const int &iListenQueueLen);
-	bool Accept(int &iClientFD);
+		bool Create();
+		bool Bind(const in_port_t &port);
+		bool Listen(const int &listenQueueLen);
+		int Accept();
 
-	bool Open(const int &iPort, const int &iListenQueueLen = 1024);
-	bool Close();
-public:
-	SocketServer();
-	virtual ~SocketServer();
+	public:
+		SocketServer();
+		virtual ~SocketServer();
 
-	bool Start(const int &iPort, const int iTimeOut, const int iJobPoolSize, const function<void(const SocketClient &socketClient)> &jobFunc);
+		bool Start(const in_port_t &port, const int &timeout,
+				   const poolSizeType &poolSize,
+				   const function<void(const SocketClient &socketClient)> &job);
+		bool Stop();
 
-	bool Stop();
+		void SetPoolSize(const poolSizeType &poolSize);
 };

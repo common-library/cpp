@@ -1,191 +1,212 @@
-#include <cstdarg>
+#include "FileLog.h"
+#include <cstdio>
 #include <cstring>
-#include <iomanip>
+#include <ctime>
+#include <format>
+#include <future>
+#include <mutex>
+#include <source_location>
+#include <sstream>
+#include <string>
+
 using namespace std;
 
-#include "FileManager.h"
+FileLog::FileLog() : condition(true), initialize(false) {
+	this->futureForFlush = async(launch::async, [this]() {
+		while (this->condition) {
+			unique_lock<mutex> lock(this->mutexForCv);
 
-#include "FileLog.h"
+			this->cv.wait(lock, [&]() {
+				return this->jobs.size() || this->condition == false;
+			});
 
-FileLog::FileLog()
-	: eLogLevel(E_LOG_LEVEL::DEBUG),
-		strFileName(""), strOutputPath(""), strFileNamePrefix(""),
-		bThread(false), uniqptrThreadPool(nullptr)
-{
-	this->vecFuture.clear();
-}
-
-FileLog::~FileLog()
-{
-	this->Finalize();
-}
-
-bool FileLog::Initialize(const E_LOG_LEVEL &eLogLevel, const string &strOutputPath, const string &strFileNamePrefix, const bool &bThread)
-{
-	this->Finalize();
-
-	this->eLogLevel = eLogLevel;
-	this->strOutputPath = strOutputPath;
-	this->strFileNamePrefix = strFileNamePrefix;
-
-	if(this->strOutputPath.size()) {
-		if(FileManager().MakeDirs(this->strOutputPath) == false) {
-			return false;
+			this->Flush();
 		}
+	});
+}
+
+FileLog::~FileLog() {
+	this->condition.store(false);
+	this->initialize.store(false);
+
+	this->cv.notify_all();
+
+	this->futureForFlush.get();
+}
+
+bool FileLog::Initialize(const LOG_LEVEL &logLevel, const string &outputPath,
+						 const string &fileName, const bool &linePrint,
+						 const bool &threadMode) {
+	lock_guard<mutex> lock(this->mutexForSettings);
+
+	this->logLevel = logLevel;
+	this->outputPath = outputPath;
+	this->fileName = fileName;
+	this->linePrint = linePrint;
+	this->threadMode.store(threadMode);
+
+	this->initialize.store(true);
+
+	return true;
+}
+
+string FileLog::MakeLog(const LOG_LEVEL &logLevel, const bool &linePrint,
+						const string &log, const tm &sTm,
+						const source_location &sourceLocation) {
+	stringstream ss;
+
+	ss << put_time(&sTm, "%H:%M:%S");
+
+	if (linePrint) {
+		return format("[{}, {}, {}:{}, {}] : {}\r\n", ss.str(),
+					  LOG_LEVEL_INFO.at(logLevel), sourceLocation.file_name(),
+					  to_string(sourceLocation.line()),
+					  sourceLocation.function_name(), log);
 	}
 
-	this->SetThread(bThread);
-
-	return true;
+	return format("[{}, {}] : {}\r\n", ss.str(), LOG_LEVEL_INFO.at(logLevel),
+				  log);
 }
 
-bool FileLog::Finalize()
-{
-	this->SetThread(false);
+string FileLog::MakeFullPath(const string &outputPath, const string &fileName,
+							 const tm &sTm) {
+	stringstream ss;
 
-	this->eLogLevel = E_LOG_LEVEL::DEBUG;
-	this->strOutputPath = "";
-	this->strFileNamePrefix = "";
+	ss << put_time(&sTm, "%Y%m%d.log");
 
-	return true;
+	string finalFileName =
+		this->outputPath.size() ? this->outputPath + "/" : "  ";
+	finalFileName += this->fileName.size() ? this->fileName + string("_") : "";
+	finalFileName += ss.str();
+
+	return finalFileName;
 }
 
-bool FileLog::Flush()
-{
-	lock_guard<mutex> lock(this->mutexLock);
-
-	for(auto &iter : this->vecFuture) {
-		if(iter.valid()) {
-			iter.get();
-		}
+bool FileLog::Print(const LOG_LEVEL &logLevel, const string &outputPath,
+					const string &fileName, const bool &linePrint,
+					const string &log, const time_t &time,
+					const source_location &sourceLocation) {
+	tm sTm;
+	if (localtime_r(&time, &sTm) == nullptr) {
+		return false;
 	}
 
-	this->vecFuture.clear();
-
-	return true;
-}
-
-bool FileLog::IsPrint(const E_LOG_LEVEL &eLogLevel)
-{
-	if(static_cast<underlying_type_t<E_LOG_LEVEL>>(eLogLevel) >=
-			static_cast<underlying_type_t<E_LOG_LEVEL>>(this->eLogLevel)) {
+	const string finalLog =
+		this->MakeLog(logLevel, linePrint, log, sTm, sourceLocation);
+	if (this->initialize == false) {
+		printf("%s", finalLog.c_str());
 		return true;
 	}
 
-	return false;
-}
+	{
+		lock_guard<mutex> lock(this->mutexForJobs);
 
-string FileLog::MakeFileName(const time_t &sTime)
-{
-	tm sTm;
-	if(localtime_r(&sTime, &sTm) == nullptr) {
-		return "";
+		const string finalFullPath =
+			this->MakeFullPath(outputPath, fileName, sTm);
+		jobs.push_back(async(launch::deferred, [finalFullPath, finalLog]() {
+			return FileManager::Instance().Write(finalFullPath, finalLog,
+												 ios::app);
+		}));
 	}
 
-	stringstream ss;
-	ss << put_time(&sTm,"%Y%m%d.log");
-
-	string strFileName = "";
-
-	if(this->strOutputPath.size()) {
-		strFileName += this->strOutputPath + "/";
-	}
-
-	if(this->strFileNamePrefix.empty()) {
-		strFileName += ss.str();
+	if (this->threadMode) {
+		this->cv.notify_one();
 	} else {
-		strFileName += this->strFileNamePrefix + "_" + ss.str();
-	}
-
-	return strFileName;
-}
-
-string FileLog::MakePrefixLog(const time_t &sTime, const E_LOG_LEVEL &eLogLevel)
-{
-	tm sTm;
-	if(localtime_r(&sTime, &sTm) == nullptr) {
-		return "";
-	}
-
-	stringstream ss;
-	ss << put_time(&sTm,"%H:%M:%S");
-
-	char caPrefix[1024];
-	memset(caPrefix, 0x00, sizeof(caPrefix));
-
-	snprintf(caPrefix, sizeof(caPrefix) - 1, "[%s, %s] : ", ss.str().c_str(), GmapLogLevelInfo.at(eLogLevel).c_str());
-
-	return caPrefix;
-}
-
-bool FileLog::Logging(const E_LOG_LEVEL &eLogLevel, const string &strFormat, ...)
-{
-	if(this->IsPrint(eLogLevel) == false) {
-		return true;
-	}
-
-	va_list ap;
-
-	va_start(ap, strFormat);
-
-	char *pcStr = nullptr;
-	vasprintf(&pcStr, strFormat.c_str(), ap);
-
-	va_end(ap);
-
-	const time_t sTime = chrono::system_clock::to_time_t(chrono::system_clock::now());
-	const string strLog = this->MakePrefixLog(sTime, eLogLevel) + " " + (pcStr && pcStr[0] ? pcStr : "") + "\r\n";
-	const string strFileName = this->MakeFileName(sTime);
-
-	auto job = [=](const string &strLog, const string &strFileName) -> bool {
-					if(this->strOutputPath.empty()) {
-						printf("%s", strLog.c_str());
-						return true;
-					}
-
-					return FileManager().Write(strFileName, strLog, ios::app);
-				};
-
-	if(this->bThread && this->uniqptrThreadPool.get()) {
-		lock_guard<mutex> lock(this->mutexLock);
-		this->vecFuture.push_back(move(this->uniqptrThreadPool->AddJob(job, strLog, strFileName)));
-	} else {
-		job(strLog, strFileName);
-	}
-
-	if(this->vecFuture.size() > 1000) {
-		this->Flush();
+		return this->Flush();
 	}
 
 	return true;
 }
 
-bool FileLog::LoggingWithSourceLocation(const E_LOG_LEVEL &eLogLevel, const string &strFileName, const int &iFileLine, const string &strFormat, ...)
-{
-	va_list ap;
+bool FileLog::Logging(const LOG_LEVEL &logLevel, const string &log,
+					  const source_location &sourceLocation) {
+	lock_guard<mutex> lock(this->mutexForSettings);
 
-	va_start(ap, strFormat);
+	if (static_cast<underlying_type_t<LOG_LEVEL>>(logLevel) <
+		static_cast<underlying_type_t<LOG_LEVEL>>(this->logLevel)) {
+		return true;
+	}
 
-	char *pcStr = nullptr;
-	vasprintf(&pcStr, strFormat.c_str(), ap);
-
-	va_end(ap);
-
-	const string strPrefixFormat = pcStr && pcStr[0] ? pcStr : "";
-	const string strPostfixFormat = "(%s:%d)";
-	const string strFormatFinal = strPrefixFormat.size() ? strPrefixFormat + " " + strPostfixFormat : strPostfixFormat;
-
-	return this->Logging(eLogLevel, strFormatFinal, strFileName.c_str(), iFileLine);
+	return this->Print(logLevel, this->outputPath, this->fileName,
+					   this->linePrint, log, time(nullptr), sourceLocation);
 }
 
-void FileLog::SetThread(const bool &bThread)
-{
-	this->bThread.store(bThread);
+bool FileLog::Debug(const string &log, const source_location &sourceLocation) {
+	return this->Logging(LOG_LEVEL::DEBUG, log, sourceLocation);
+}
 
-	if(this->bThread && this->uniqptrThreadPool.get() == nullptr) {
-		this->uniqptrThreadPool = make_unique<ThreadPool>(1);
-	}else if(this->bThread == false) {
-		this->Flush();
-		this->uniqptrThreadPool.reset(nullptr);
+bool FileLog::Info(const string &log, const source_location &sourceLocation) {
+	return this->Logging(LOG_LEVEL::INFO, log, sourceLocation);
+}
+
+bool FileLog::Warning(const string &log,
+					  const source_location &sourceLocation) {
+	return this->Logging(LOG_LEVEL::WARNING, log, sourceLocation);
+}
+
+bool FileLog::Error(const string &log, const source_location &sourceLocation) {
+	return this->Logging(LOG_LEVEL::ERROR, log, sourceLocation);
+}
+
+bool FileLog::Critical(const string &log,
+					   const source_location &sourceLocation) {
+	return this->Logging(LOG_LEVEL::CRITICAL, log, sourceLocation);
+}
+
+bool FileLog::Flush() {
+	lock_guard<mutex> lock(this->mutexForJobs);
+
+	for (auto &iter : this->jobs) {
+		if (iter.valid()) {
+			if (iter.get() == false) {
+				printf("log error - errno : (%d), strerror : (%s)\n", errno,
+					   strerror(errno));
+			}
+		}
 	}
+	this->jobs.clear();
+
+	return true;
+}
+
+LOG_LEVEL FileLog::GetLogLevel() const {
+	lock_guard<mutex> lock(this->mutexForSettings);
+	return this->logLevel;
+}
+
+void FileLog::SetLogLevel(const LOG_LEVEL &logLevel) {
+	lock_guard<mutex> lock(this->mutexForSettings);
+	this->logLevel = logLevel;
+}
+
+string FileLog::GetOutputPath() const {
+	lock_guard<mutex> lock(this->mutexForSettings);
+	return this->outputPath;
+}
+
+void FileLog::SetOutputPath(const string &outputPath) {
+	lock_guard<mutex> lock(this->mutexForSettings);
+	this->outputPath = outputPath;
+}
+
+string FileLog::GetFileName() const {
+	lock_guard<mutex> lock(this->mutexForSettings);
+	return this->fileName;
+}
+
+void FileLog::SetFileName(const string &fileName) {
+	lock_guard<mutex> lock(this->mutexForSettings);
+	this->fileName = fileName;
+}
+
+bool FileLog::GetLinePrint() const { return this->linePrint; }
+
+void FileLog::SetLinePrint(const bool &linePrint) {
+	this->linePrint.store(linePrint);
+}
+
+bool FileLog::GetThreadMode() const { return this->threadMode; }
+
+void FileLog::SetThreadMode(const bool &threadMode) {
+	this->threadMode.store(threadMode);
 }

@@ -1,49 +1,49 @@
-#include "test.h"
-
 #include "../CommonConfig.h"
-
+#include "test.h"
 #include "gtest/gtest.h"
+#include <memory>
 
-static CommonConfig get_config()
-{
-	CommonConfig commonConfig;
+using namespace std;
 
-	EXPECT_TRUE(commonConfig.Initialize(GstrConfigPath));
+static unique_ptr<CommonConfig> get_config() {
+	auto commonConfig = make_unique<CommonConfig>();
+
+	EXPECT_TRUE(commonConfig->Initialize(CONFIG_PATH));
 
 	return commonConfig;
 }
 
-TEST(CommonConfigTest, Initialize)
-{
+TEST(CommonConfigTest, Initialize) {
 	CommonConfig commonConfig;
 
-	EXPECT_TRUE(commonConfig.Initialize(GstrConfigPath));
+	EXPECT_TRUE(commonConfig.Initialize(CONFIG_PATH));
 	EXPECT_FALSE(commonConfig.Initialize(""));
 }
 
-TEST(CommonConfigTest, GetWorkingPath)
-{
-	EXPECT_STREQ(get_config().GetWorkingPath().c_str(), "/tmp/test/socket_server");
+TEST(CommonConfigTest, GetFileName) {
+	EXPECT_STREQ(get_config()->GetFileName().c_str(), "common.config");
 }
 
-TEST(CommonConfigTest, GetLogLevel)
-{
-	if(get_config().GetLogLevel() != E_LOG_LEVEL::DEBUG) {
-		EXPECT_STREQ("invalid GetLogLevel()", "");
-	}
+TEST(CommonConfigTest, GetLogLevel) {
+	EXPECT_EQ(get_config()->GetLogLevel(), LOG_LEVEL::DEBUG);
 }
 
-TEST(CommonConfigTest, GetThreadMode)
-{
-	EXPECT_TRUE(get_config().GetThreadMode());
+TEST(CommonConfigTest, GetWorkingPath) {
+	EXPECT_STREQ(get_config()->GetWorkingPath().c_str(), "/tmp/test/");
 }
 
-TEST(CommonConfigTest, GetLogOutputPath)
-{
-	EXPECT_STREQ(get_config().GetLogOutputPath().c_str(), "/tmp/test/log/");
+TEST(CommonConfigTest, GetLogOutputPath) {
+	EXPECT_STREQ(get_config()->GetLogOutputPath().c_str(), "/tmp/test/log/");
 }
 
-TEST(CommonConfigTest, GetLogFileNamePrefix)
-{
-	EXPECT_STREQ(get_config().GetLogFileNamePrefix().c_str(), "socket_server");
+TEST(CommonConfigTest, GetLogFileName) {
+	EXPECT_STREQ(get_config()->GetLogFileName().c_str(), "test");
+}
+
+TEST(CommonConfigTest, GetLogLinePrint) {
+	EXPECT_TRUE(get_config()->GetLogLinePrint());
+}
+
+TEST(CommonConfigTest, GetLogThreadMode) {
+	EXPECT_TRUE(get_config()->GetLogThreadMode());
 }

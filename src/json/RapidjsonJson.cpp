@@ -1,86 +1,98 @@
 #include "RapidjsonJson.h"
+#include <any>
+#include <map>
+#include <string>
+#include <vector>
 
-rapidjson::Value& RapidjsonJson::GetTopValue(const vector<string> &vecKey)
-{
-	rapidjson::Value &value = this->document[vecKey[0].c_str()];
+using namespace std;
 
-	for(unsigned int ui = 1 ; ui < vecKey.size() ; ui++) {
-		value = value[vecKey[ui].c_str()];
-	}
+bool RapidjsonJson::ParsingFromString(const string &contents) const {
+	this->document.Parse(contents.c_str());
 
-	this->document.CopyFrom(this->documentOrg, this->document.GetAllocator());
-
-	return value;
-}
-
-bool RapidjsonJson::Parsing(const string &strContents)
-{
-	this->document.Parse(strContents.c_str());
-
-	if(this->document.HasParseError()) {
+	if (this->document.HasParseError()) {
 		return false;
 	}
 
-	this->documentOrg.CopyFrom(this->document, this->documentOrg.GetAllocator());
+	this->documentOrg.CopyFrom(this->document,
+							   this->documentOrg.GetAllocator());
 
 	return true;
 }
 
-JSON_VALUE_TYPE RapidjsonJson::GetValue(const vector<string> &vecKey, const JSON_VALUE_TYPE &valueType)
-{
-	rapidjson::Value &value = this->GetTopValue(vecKey);
-
-	JSON_VALUE_TYPE result;
-
-	if(valueType.type() == typeid(bool)) {
-		return value.GetBool();
-	} else if(valueType.type() == typeid(int)) {
-		return value.GetInt();
-	} else if(valueType.type() == typeid(double)) {
-		return value.GetDouble();
-	} else if(valueType.type() == typeid(string)) {
-		return string(value.GetString());
+any RapidjsonJson::GetObject(const vector<string> &key) const {
+	if (this->document.HasMember(key[0].c_str()) == false) {
+		return any{};
 	}
 
-	return boost::blank();
+	rapidjson::Value &value = this->document[key[0].c_str()];
+
+	for (unsigned int index = 1; index < key.size(); ++index) {
+		if (value.IsObject() == false ||
+			value.HasMember(key[index].c_str()) == false) {
+			return any{};
+		}
+
+		value = value[key[index].c_str()];
+	}
+
+	this->document.CopyFrom(this->documentOrg, this->document.GetAllocator());
+
+	return &value;
 }
 
-vector<map<string, JSON_VALUE_TYPE>> RapidjsonJson::GetArray(const vector<string> &vecKey, const string &strArrayName, const map<string, JSON_VALUE_TYPE> &mapValueInfo)
-{
-	vector<string> vecFinalKeyTemp = vecKey;
-	vecFinalKeyTemp.push_back(strArrayName);
+any RapidjsonJson::GetValueDerived(const any &object) const {
+	return this->GetValueDerived(*any_cast<rapidjson::Value *>(object));
+}
 
-	const vector<string> vecFinalKey = vecFinalKeyTemp;
-
-	rapidjson::Value &v_top = this->GetTopValue(vecFinalKey);
-
-	vector<map<string, JSON_VALUE_TYPE>> vecValue;
-	vecValue.clear();
-
-	for(const auto &iter : v_top.GetArray()) {
-		map<string, JSON_VALUE_TYPE> mapValue;
-		mapValue.clear();
-
-		for(const auto &iter2 : mapValueInfo) {
-			const rapidjson::Value &value = iter2.first.size() ? iter[iter2.first.c_str()] : iter;
-
-			if(iter2.second.type() == typeid(bool)) {
-				mapValue[iter2.first] = value.GetBool();
-			} else if(iter2.second.type() == typeid(int)) {
-				mapValue[iter2.first] = int(value.GetInt());
-			} else if(iter2.second.type() == typeid(double)) {
-				mapValue[iter2.first] = value.GetDouble();
-			} else if(iter2.second.type() == typeid(string)) {
-				mapValue[iter2.first] = string(value.GetString());
-			}
-		}
-
-		if(mapValue.empty()) {
-			continue;
-		}
-
-		vecValue.push_back(mapValue);
+any RapidjsonJson::GetValueDerived(const rapidjson::Value &value) const {
+	if (value.IsBool()) {
+		return value.GetBool();
+	} else if (value.IsInt()) {
+		return int64_t(value.GetInt());
+	} else if (value.IsInt64()) {
+		return int64_t(value.GetInt64());
+	} else if (value.IsUint()) {
+		return uint32_t(value.GetUint());
+	} else if (value.IsUint64()) {
+		return uint64_t(value.GetUint64());
+	} else if (value.IsDouble()) {
+		return value.GetDouble();
+	} else if (value.IsString()) {
+		return string(value.GetString());
+	} else if (value.IsNull()) {
+		return nullptr;
 	}
 
-	return vecValue;
+	return any{};
+}
+
+vector<map<string, any>>
+RapidjsonJson::GetArray(const vector<string> &key) const {
+	const auto object = this->GetObject(key);
+	if (object.has_value() == false) {
+		return {};
+	}
+
+	const rapidjson::Value &value = *any_cast<rapidjson::Value *>(object);
+	if (value.IsArray() == false) {
+		return {};
+	}
+
+	vector<map<string, any>> result{};
+	for (const auto &iter1 : value.GetArray()) {
+		map<string, any> temp{};
+
+		if (iter1.IsObject()) {
+			for (auto &iter2 : iter1.GetObject()) {
+				temp[iter2.name.GetString()] =
+					this->GetValueDerived(iter2.value);
+			}
+		} else {
+			temp[""] = this->GetValueDerived(iter1);
+		}
+
+		result.push_back(temp);
+	}
+
+	return result;
 }

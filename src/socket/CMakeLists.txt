@@ -16,6 +16,7 @@ set(SOURCE
 
 set(SOURCE_TEST
 		test/main.cpp
+		test/DualIpTest.cpp
 		test/SocketServerTest.cpp
 		test/SocketClientTest.cpp
 	)

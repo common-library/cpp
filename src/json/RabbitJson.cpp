@@ -1,77 +1,95 @@
 #include "RabbitJson.h"
+#include <any>
+#include <array>
+#include <map>
+#include <string>
+#include <vector>
 
-rabbit::object RabbitJson::GetObject(const vector<string> &vecKey)
-{
-	rabbit::object object = this->document[vecKey[0]];
+using namespace std;
 
-	for(unsigned int ui = 1 ; ui < vecKey.size() ; ui++) {
-		object = object[vecKey[ui]];
+bool RabbitJson::ParsingFromString(const string &contents) const {
+	try {
+		this->document.parse(contents.c_str());
+	} catch (exception &ex) {
+		return false;
+	}
+
+	return true;
+}
+
+any RabbitJson::GetObject(const vector<string> &key) const {
+	if (this->document.has(key[0].c_str()) == false) {
+		return any{};
+	}
+
+	rabbit::object object = this->document[key[0]];
+
+	for (unsigned int index = 1; index < key.size(); index++) {
+		if (object.has(key[index]) == false) {
+			return any{};
+		}
+
+		object = object[key[index]];
 	}
 
 	return object;
 }
 
-bool RabbitJson::Parsing(const string &strContents)
-{
-	this->document.parse(strContents.c_str());
+any RabbitJson::GetValueDerived(const any &object) const {
+	const rabbit::object &o = any_cast<rabbit::object>(object);
 
-	return true;
-}
-
-JSON_VALUE_TYPE RabbitJson::GetValue(const vector<string> &vecKey, const JSON_VALUE_TYPE &valueType)
-{
-	rabbit::object object = this->GetObject(vecKey);
-
-	if(valueType.type() == typeid(bool)) {
-		return object.as_bool();
-	} else if(valueType.type() == typeid(int)) {
-		return object.as_int();
-	} else if(valueType.type() == typeid(double)) {
-		return object.as_double();
-	} else if(valueType.type() == typeid(string)) {
-		return object.str();
+	if (o.is_bool()) {
+		return o.as_bool();
+	} else if (o.is_int()) {
+		return int64_t(o.as_int());
+	} else if (o.is_int64()) {
+		return int64_t(o.as_int64());
+	} else if (o.is_uint()) {
+		return uint32_t(o.as_uint());
+	} else if (o.is_uint64()) {
+		return uint64_t(o.as_uint64());
+	} else if (o.is_double()) {
+		return o.as_double();
+	} else if (o.is_string()) {
+		return o.str();
+	} else if (o.is_null()) {
+		return any{};
 	}
 
-	return boost::blank();
+	return nullptr;
 }
 
-vector<map<string, JSON_VALUE_TYPE>> RabbitJson::GetArray(const vector<string> &vecKey, const string &strArrayName, const map<string, JSON_VALUE_TYPE> &mapValueInfo)
-{
+vector<map<string, any>> RabbitJson::GetArray(const vector<string> &key) const {
+	if (key.empty()) {
+		return {};
+	}
 
-	vector<string> vecFinalKeyTemp = vecKey;
-	vecFinalKeyTemp.push_back(strArrayName);
+	const auto object = this->GetObject(key);
+	if (object.has_value() == false) {
+		return {};
+	}
 
-	const vector<string> vecFinalKey = vecFinalKeyTemp;
+	const rabbit::object &objectTemp = any_cast<rabbit::object>(object);
+	if (objectTemp.is_array() == false) {
+		return {};
+	}
 
-	rabbit::object object = this->GetObject(vecFinalKey);
+	vector<map<string, any>> result{};
+	for (auto iter1 : rabbit::array{objectTemp}) {
+		map<string, any> temp{};
 
-	vector<map<string, JSON_VALUE_TYPE>> vecValue;
-	vecValue.clear();
-
-	for(uint32_t i = 0 ; i < object.size() ; i++) {
-		map<string, JSON_VALUE_TYPE> mapValue;
-		mapValue.clear();
-
-		for(const auto &iter2 : mapValueInfo) {
-			const rabbit::object o_value = iter2.first.size() ? object[i][iter2.first] : object[i];
-
-			if(iter2.second.type() == typeid(bool)) {
-				mapValue[iter2.first] = o_value.as_bool();
-			} else if(iter2.second.type() == typeid(int)) {
-				mapValue[iter2.first] = o_value.as_int();
-			} else if(iter2.second.type() == typeid(double)) {
-				mapValue[iter2.first] = o_value.as_double();
-			} else if(iter2.second.type() == typeid(string)) {
-				mapValue[iter2.first] = o_value.str();
+		if (iter1.is_object()) {
+			for (auto iter2 = iter1.member_begin(); iter2 != iter1.member_end();
+				 ++iter2) {
+				temp[iter2->name()] = this->GetValueDerived(
+					make_any<rabbit::object>(iter2->value()));
 			}
+		} else {
+			temp[""] = this->GetValueDerived(make_any<rabbit::object>(iter1));
 		}
 
-		if(mapValue.empty()) {
-			continue;
-		}
-
-		vecValue.push_back(mapValue);
+		result.push_back(temp);
 	}
 
-	return vecValue;
+	return result;
 }

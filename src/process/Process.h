@@ -1,30 +1,22 @@
 #pragma once
 
-#include <map>
-#include <condition_variable>
+#include <atomic>
+
 using namespace std;
 
-enum class E_PROCESS_TYPE {
-	PARENT = 0,
-	CHILD,
-};
-
-static const map<E_PROCESS_TYPE, string> GmapProcessInfo = {
-		{E_PROCESS_TYPE::PARENT, "PARENT"},
-		{E_PROCESS_TYPE::CHILD, "CHILD"},
-	};
-
 class Process {
-private:
-	const E_PROCESS_TYPE eProcessType;
-protected:
+	protected:
+		atomic_bool condition;
 
-public:
-	Process(const E_PROCESS_TYPE &eProcessType) : eProcessType(eProcessType) {};
-	virtual ~Process() = default;
+		virtual bool Initialize() = 0;
+		virtual bool Finalize() = 0;
 
-	virtual bool Start() = 0;
-	virtual bool Stop() = 0;
+	public:
+		Process();
+		virtual ~Process() = default;
 
-	E_PROCESS_TYPE GetProcessType() {return this->eProcessType;}
+		virtual bool Start() = 0;
+		virtual bool Stop() = 0;
+
+		virtual bool GetCondition() const final;
 };

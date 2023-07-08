@@ -4,6 +4,7 @@ set(TEST_BUILD_TARGET ${BUILD_TARGET}${POSTFIX_TEST_NAME})
 
 set(HEADER
 		trim.h
+		type_name.h
 	)
 
 set(SOURCE
@@ -13,6 +14,7 @@ set(SOURCE
 set(SOURCE_TEST
 		test/main.cpp
 		test/trimTest.cpp
+		test/type_name_test.cpp
 	)
 
 set(DEPENDENCIES

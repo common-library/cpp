@@ -4,7 +4,6 @@ set(TEST_BUILD_TARGET ${BUILD_TARGET}${POSTFIX_TEST_NAME})
 
 set(HEADER
 		QueueManager.h
-		QueueManager.hpp
 	)
 
 set(SOURCE

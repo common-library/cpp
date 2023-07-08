@@ -1,52 +1,51 @@
 #pragma once
 
 #include <netdb.h>
-#include <sys/poll.h>
-
+#include <netinet/in.h>
 #include <string>
+#include <sys/poll.h>
+#include <tuple>
+
 using namespace std;
 
 class SocketClient {
-private:
-	int iFD;
-	string strAddress;
-	in_port_t iPort;
-	int iTimeOut;
+	private:
+		int fd;
+		pollfd pollFD;
 
-	string strPeerAddress;
-	in_port_t iPeerPort;
+		string address;
+		in_port_t port;
+		int timeout;
 
-	bool InitializeFromFD();
-	bool InitializeFromAddress();
-	bool Finalize();
+		string peerAddress;
+		in_port_t peerPort;
 
-	bool InitPoll(pollfd &sPollFD, const short int &siFlags) const;
-	bool Poll(const short int &siFlags) const;
-	bool Poll(char *pcBuffer, const int &iBufferLen, int &iResultLen, const short int &siFlags) const;
-	bool PollIn(char *pcBuffer, const int &iBufferLen, int &iResultLen, const short int &siFlags) const;
-	bool PollOut(char *pcBuffer, const int &iBufferLen, int &iResultLen, const short int &siFlags) const;
+		bool Initialize(const int &fd);
+		bool Initialize(const string &address, const in_port_t &port);
+		bool Finalize();
 
-	bool Connect();
-	bool Connect(addrinfo *psAddrInfo);
-	bool DisConnect();
+		bool Poll(const short int &flags) const;
 
-	short int GetFlags();
-	bool SetFlags(const short int &siFlags);
+		bool Connect(addrinfo *addrInfo);
+		bool Connect(const string &address, const in_port_t &port);
+		bool DisConnect();
 
-	bool SetPeerInfo();
-public:
-	SocketClient(const int &iFD, const int &iTimeOut);
-	SocketClient(const string &strAddress, const in_port_t &iPort, const int &iTimeout);
-	virtual ~SocketClient();
+		short int GetFlags() const;
+		bool SetFlags(const short int &flags) const;
 
-	string ReadGarbage() const;
+		bool SetPeerInfo();
 
-	bool Read(string &strRead, const int &iReadLen, bool &bEnd) const;
-	bool Read(char *pcRead, const int &iReadLen, int &iResultLen, bool &bEnd) const;
+	public:
+		SocketClient(const int &fd, const int &timeout);
+		SocketClient(const string &address, const in_port_t &port,
+					 const int &timeout);
+		virtual ~SocketClient();
 
-	bool Write(const string &strWrite) const;
-	bool Write(const char * const pcWrite, const int &iWriteLen, int &iResultLen) const;
+		tuple<bool, string> Read(const int &readSize, bool &end) const;
+		bool Write(const string &data) const;
 
-	string GetPeerAddress() const;
-	in_port_t GetPeerPort() const;
+		bool ReadGarbage() const;
+
+		string GetPeerAddress() const;
+		in_port_t GetPeerPort() const;
 };

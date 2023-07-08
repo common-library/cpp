@@ -1,28 +1,15 @@
 #pragma once
 
-#include <atomic>
-using namespace std;
-
 #include "Process.h"
 
 class ChildProcess : public Process {
-private:
-	atomic_bool bCondition;
+	protected:
+		virtual bool Job() = 0;
 
-	bool Initialize();
-	bool Finalize();
+	public:
+		ChildProcess() = default;
+		virtual ~ChildProcess() = default;
 
-	void SetSignal();
-
-	static void SigTerm(int iSig);
-protected:
-	virtual bool InitializeDerived() = 0;
-	virtual bool FinalizeDerived() = 0;
-	virtual bool Job() = 0;
-public:
-	ChildProcess();
-	virtual ~ChildProcess() = default;
-
-	virtual bool Start();
-	virtual bool Stop();
+		virtual bool Start() override final;
+		virtual bool Stop() override final;
 };

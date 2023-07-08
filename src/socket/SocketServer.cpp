@@ -1,172 +1,144 @@
-#include <fcntl.h>
-#include <unistd.h>
-
+#include "SocketServer.h"
 #include <cstring>
+#include <fcntl.h>
+#include <functional>
+#include <netinet/in.h>
+#include <thread>
+
 using namespace std;
 
-#include "ThreadPool.h"
+SocketServer::SocketServer() : fd(-1), start(false), threadPool(0) {}
 
-#include "SocketServer.h"
+SocketServer::~SocketServer() { this->Stop(); }
 
-SocketServer::SocketServer()
-	: bStart(false),
-		iFD(-1)
-{
-}
-
-SocketServer::~SocketServer()
-{
-	this->Stop();
-}
-
-bool SocketServer::Create()
-{
-	this->iFD = socket(AF_INET, SOCK_STREAM, 0);
-	if(this->iFD == -1) {
+bool SocketServer::Open(const in_port_t &port, const int &listenQueueLen) {
+	if (this->Create() == false) {
 		return false;
 	}
 
-	int iOn = 1;
-	if(setsockopt(this->iFD, SOL_SOCKET, SO_REUSEADDR, &iOn, sizeof(int))) {
+	if (this->Bind(port) == false) {
+		this->Close();
 		return false;
 	}
 
-	if(fcntl(this->iFD, F_SETFL, fcntl(this->iFD, F_GETFL, 0) | O_NONBLOCK) == -1) {
+	if (this->Listen(listenQueueLen) == false) {
+		this->Close();
 		return false;
 	}
 
 	return true;
 }
 
-bool SocketServer::Bind(const int &iPort)
-{
-	if(iPort < 0) {
-		return false;
-	}
-
-	struct sockaddr_in sSockAddrIn;
-	memset(&sSockAddrIn, 0x00, sizeof(sSockAddrIn));
-	sSockAddrIn.sin_family = AF_INET;
-	sSockAddrIn.sin_addr.s_addr = htonl(INADDR_ANY);
-	sSockAddrIn.sin_port = htons(iPort);
-
-	if(bind(this->iFD, (struct sockaddr *)&sSockAddrIn, sizeof(sSockAddrIn)) == -1) {
-		return false;
-	}
-
-	return true;
-}
-
-bool SocketServer::Listen(const int &iListenQueueLen)
-{
-	if(listen(this->iFD, iListenQueueLen) == -1) {
-		return false;
-	}
-
-	return true;
-}
-
-bool SocketServer::Accept(int &iClientFD)
-{
-	struct sockaddr_in sSockaddr;
-	const int iSizeofSockaddr = sizeof(sSockaddr);
-
-	iClientFD = accept(this->iFD, (struct sockaddr *)&sSockaddr, (socklen_t *)&iSizeofSockaddr);
-	if(iClientFD != -1) {
+bool SocketServer::Close() {
+	if (this->fd == -1) {
 		return true;
 	}
 
-	switch(errno) {
-		case EAGAIN:
-			this_thread::sleep_for(std::chrono::milliseconds(1000));
-			break;
-		default:
-			break;
-	}
+	const int result = close(this->fd);
+	this->fd = -1;
 
-	return false;
+	return result == 0 ? true : false;
 }
 
-bool SocketServer::Open(const int &iPort, const int &iListenQueueLen)
-{
-	if(this->Create() == false) {
+bool SocketServer::Create() {
+	this->fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (this->fd == -1) {
 		return false;
 	}
 
-	if(this->Bind(iPort) == false) {
-		this->Close();
+	int optval = 1;
+	if (setsockopt(this->fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(int))) {
 		return false;
 	}
 
-	if(this->Listen(iListenQueueLen) == false) {
-		this->Close();
+	if (fcntl(this->fd, F_SETFL, fcntl(this->fd, F_GETFL, 0) | O_NONBLOCK) ==
+		-1) {
 		return false;
 	}
 
 	return true;
 }
 
-bool SocketServer::Close()
-{
-	int iResult = 0;
-	if(this->iFD != -1) {
-		iResult = close(this->iFD);
-		this->iFD = -1;
+bool SocketServer::Bind(const in_port_t &port) {
+	if (port <= 0) {
+		return false;
 	}
 
-	return iResult == 0 ? true : false;
+	struct sockaddr_in sockAddrIn;
+	memset(&sockAddrIn, 0x00, sizeof(sockAddrIn));
+	sockAddrIn.sin_family = AF_INET;
+	sockAddrIn.sin_addr.s_addr = htonl(INADDR_ANY);
+	sockAddrIn.sin_port = htons(port);
+
+	const auto result =
+		bind(this->fd, (struct sockaddr *)&sockAddrIn, sizeof(sockAddrIn));
+
+	return result != -1 ? true : false;
 }
 
-bool SocketServer::Start(const int &iPort, const int iTimeOut, const int iJobPoolSize, const function<void(const SocketClient &socketClient)> &jobFunc)
-{
-	if(this->bStart) {
+bool SocketServer::Listen(const int &listenQueueLen) {
+	return listen(this->fd, listenQueueLen) != -1 ? true : false;
+}
+
+int SocketServer::Accept() {
+	struct sockaddr_in sSockaddr;
+	socklen_t sockLen = sizeof(sSockaddr);
+
+	const auto clientFD =
+		accept(this->fd, (struct sockaddr *)&sSockaddr, &sockLen);
+	if (clientFD != -1) {
+		return clientFD;
+	}
+
+	switch (errno) {
+	case EAGAIN:
+		this_thread::sleep_for(100ms);
+		break;
+	default:
+		break;
+	}
+
+	return -1;
+}
+
+bool SocketServer::Start(
+	const in_port_t &port, const int &timeout, const poolSizeType &poolSize,
+	const function<void(const SocketClient &socketClient)> &job) {
+	if (this->start) {
 		this->Stop();
 	}
 
-	this->bStart.store(true);
+	this->start.store(true);
 
-	if(this->Open(iPort) == false) {
+	if (this->Open(port) == false) {
 		return false;
 	}
 
-	ThreadPool threadPool(iJobPoolSize);
+	this->threadPool.SetPoolSize(poolSize + 1);
 
-	vector<future<void>> vecFuture;
-	vecFuture.clear();
-
-	while(this->bStart) {
-		int iClientFD = -1;
-		if(this->Accept(iClientFD) == false) {
-			continue;
-		}
-
-		auto jobFinal = [=]() {
-			jobFunc(SocketClient(iClientFD, iTimeOut));
-		};
-
-		vecFuture.push_back(threadPool.AddJob(jobFinal));
-
-		if((int)vecFuture.size() == iJobPoolSize) {
-			for(auto &iter : vecFuture) {
-				iter.get();
+	this->threadPool.AddJob([this, job, timeout]() {
+		while (this->start) {
+			const auto clientFD = this->Accept();
+			if (clientFD == -1) {
+				continue;
 			}
-			vecFuture.clear();
+
+			this->threadPool.AddJob(
+				[=]() { job(SocketClient(clientFD, timeout)); });
 		}
-	}
-
-	for(auto &iter : vecFuture) {
-		iter.get();
-	}
-	vecFuture.clear();
-
-	this->Close();
+	});
 
 	return true;
 }
 
-bool SocketServer::Stop()
-{
-	this->bStart.store(false);
+bool SocketServer::Stop() {
+	this->start.store(false);
 
-	return true;
+	this->threadPool.SetPoolSize(0, false);
+
+	return this->Close();
+}
+
+void SocketServer::SetPoolSize(const poolSizeType &poolSize) {
+	this->threadPool.SetPoolSize(poolSize + 1);
 }

@@ -1,21 +1,27 @@
 #pragma once
 
-#include "rabbit.hpp"
-
 #include "Json.h"
+#include "rabbit.hpp"
+#include <any>
+#include <map>
+#include <string>
+#include <vector>
+
+using namespace std;
 
 class RabbitJson : public Json {
-private:
-	rabbit::document document;
-public:
-	RabbitJson() = default;
-	virtual ~RabbitJson() = default;
+	private:
+		mutable rabbit::document document;
 
-	rabbit::object GetObject(const vector<string> &vecKey);
+		virtual any GetObject(const vector<string> &key) const override;
+		virtual any GetValueDerived(const any &object) const override;
 
-	virtual bool Parsing(const string &strContents);
+	public:
+		RabbitJson() = default;
+		virtual ~RabbitJson() = default;
 
-	virtual JSON_VALUE_TYPE GetValue(const vector<string> &vecKey, const JSON_VALUE_TYPE &valueType);
+		virtual bool ParsingFromString(const string &contents) const override;
 
-	virtual vector<map<string, JSON_VALUE_TYPE>> GetArray(const vector<string> &vecKey, const string &strArrayName, const map<string, JSON_VALUE_TYPE> &mapValueInfo);
+		virtual vector<map<string, any>>
+		GetArray(const vector<string> &key) const override;
 };

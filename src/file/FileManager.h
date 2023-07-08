@@ -1,47 +1,54 @@
 #pragma once
 
-#include <vector>
 #include <filesystem>
+#include <string>
+#include <tuple>
+#include <vector>
+
 using namespace std;
 
 class FileManager {
-private:
+	private:
+		FileManager() = default;
+		virtual ~FileManager() = default;
 
-public:
-	FileManager() = default;
-	virtual ~FileManager() = default;
+	public:
+		bool IsExist(const string &path) const;
+		bool IsRegularFile(const string &path) const;
+		bool IsDirectory(const string &path) const;
 
-	bool IsExist(const string &strPath);
-	bool IsRegularFile(const string &strPath);
-	bool IsDirectory(const string &strPath);
+		int LockBetweenProcess(const string &path,
+							   const mode_t &mode = 0755) const;
+		bool LockBetweenProcess(const int &fd) const;
+		bool UnLockBetweenProcess(const int &fd) const;
 
-	bool LockBetweenProcess(const int &iFD);
-	int LockBetweenProcess(const string &strPath);
-	bool UnLockBetweenProcess(const int &iFD);
+		tuple<bool, string> Read(const string &path) const;
+		bool Write(const string &path, const string &data,
+				   const ios_base::openmode &openMode) const;
 
-	bool Read(const string &strPath, string &strResult);
-	bool Write(const string &strPath, const string &strData, const ios_base::openmode &openMode);
+		bool MakeDir(const string &path) const;
+		bool MakeDirs(const string &path) const;
 
-	bool MakeDir(const string &strPath);
-	bool MakeDirs(const string &strPath);
+		bool Copy(const string &fromPath, const string &toPath,
+				  filesystem::copy_options options =
+					  filesystem::copy_options::none) const;
+		bool CopyAll(const string &fromPath, const string &toPath) const;
 
-	bool Copy(const string &strFromPath, const string &strToPath);
-	bool Copy(const string &strFromPath, const string &strToPath, filesystem::copy_options options);
-	bool CopyAll(const string &strFromPath, const string &strToPath);
+		bool Remove(const string &path) const;
+		bool RemoveAll(const string &path) const;
 
-	bool Remove(const string &strPath);
-	bool RemoveAll(const string &strPath);
+		string ToAbsolutePath(const string &path) const;
+		string ToCanonicalPath(const string &path) const;
+		string ToRelativePathToRootPath(const string &path) const;
 
-	string ToAbsolutePath(const string &strPath);
-	string ToCanonicalPath(const string &strPath);
-	string ToRelativePathToRootPath(const string &strPath);
+		string GetTempPath() const;
+		string GetRootPath(const string &path) const;
+		string GetRelativePath(const string &path) const;
+		vector<string> GetSubDirectories(const string &path) const;
+		vector<string> GetRecursiveSubDirectories(const string &path) const;
 
-	string GetTempPath();
-	string GetRootPath(const string &strPath);
-	string GetRelativePath(const string &strPath);
-	vector<string> GetPathList(const string &strPath);
-	vector<string> GetRecursivePathList(const string &strPath);
+		string GetCurrentPath() const;
+		bool SetCurrentPath(const string &path) const;
 
-	string GetCurrentPath();
-	bool SetCurrentPath(const string &strPath);
+		static FileManager &Instance();
 };
