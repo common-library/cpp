@@ -19,7 +19,7 @@
  - CentOS Stream release 9
 
 ### Compiler
- - gcc version 12.2.1 20221121
+ - gcc version 13.1.0
 
 ### Build System
  - cmake version 3.20.2
