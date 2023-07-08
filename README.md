@@ -25,9 +25,6 @@
  - cmake version 3.20.2
 
 ## Build
- - gcc
-   - `dnf install gcc-toolset-12`
-   - `source /opt/rh/gcc-toolset-9/enable`
  - basic
    - `mkdir build && cd build`
    - `cmake ../ && make -j4 install`
