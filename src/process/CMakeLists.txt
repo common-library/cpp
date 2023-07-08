@@ -3,6 +3,7 @@ set(ALIAS_NAME "lib::${BUILD_TARGET}")
 set(TEST_BUILD_TARGET ${BUILD_TARGET}${POSTFIX_TEST_NAME})
 
 set(HEADER
+		Signal.h
 		Process.h
 		ChildProcess.h
 		ParentProcess.h
@@ -10,6 +11,8 @@ set(HEADER
 	)
 
 set(SOURCE
+		Signal.cpp
+		Process.cpp
 		ChildProcess.cpp
 		ParentProcess.cpp
 		EnvironmentVariable.cpp
@@ -17,6 +20,7 @@ set(SOURCE
 
 set(SOURCE_TEST
 		test/main.cpp
+		test/SignalTest.cpp
 		test/ChildProcessTest.cpp
 		test/ParentProcessTest.cpp
 		test/EnvironmentVariableTest.cpp
@@ -24,8 +28,7 @@ set(SOURCE_TEST
 
 set(DEPENDENCIES
 		lib::config
-		lib::thread
-		lib::design-pattern
+		lib::file
 	)
 
 set(CONFIGURE_FILE_TEST

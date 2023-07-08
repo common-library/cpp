@@ -1,26 +1,29 @@
 #pragma once
 
-#include "rapidjson/document.h"
-
 #include "Json.h"
+#include "rapidjson/document.h"
+#include <any>
+#include <map>
+#include <string>
+#include <vector>
+
+using namespace std;
 
 class RapidjsonJson : public Json {
 	private:
-		rapidjson::Document document;
-		rapidjson::Document documentOrg;
+		mutable rapidjson::Document document;
+		mutable rapidjson::Document documentOrg;
+
+		virtual any GetObject(const vector<string> &key) const override;
+		virtual any GetValueDerived(const any &object) const override;
+		any GetValueDerived(const rapidjson::Value &value) const;
 
 	public:
 		RapidjsonJson() = default;
 		virtual ~RapidjsonJson() = default;
 
-		rapidjson::Value& GetTopValue(const vector<string>& vecKey);
+		virtual bool ParsingFromString(const string &contents) const override;
 
-		virtual bool Parsing(const string& strContents);
-
-		virtual JSON_VALUE_TYPE GetValue(const vector<string>& vecKey,
-										 const JSON_VALUE_TYPE& valueType);
-
-		virtual vector<map<string, JSON_VALUE_TYPE>>
-		GetArray(const vector<string>& vecKey, const string& strArrayName,
-				 const map<string, JSON_VALUE_TYPE>& mapValueInfo);
+		virtual vector<map<string, any>>
+		GetArray(const vector<string> &key) const override;
 };

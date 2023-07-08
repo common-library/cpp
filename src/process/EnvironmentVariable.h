@@ -1,64 +1,29 @@
 #pragma once
 
-#include <sys/types.h>
-
-#include <atomic>
 #include <string>
 #include <vector>
-using namespace std;
 
-#include "Process.h"
+using namespace std;
 
 class EnvironmentVariable {
 	private:
-		gid_t gid;
-		uid_t uid;
+		bool standAlone = false;
+		string configPath = "";
+		string binaryName = "";
 
-		pid_t parentPid;
-		pid_t childPid;
-
-		bool bStandAlone;
-
-		string strConfigPath;
-		string strProcessName;
-
-		atomic_bool bCondition;
-
-		vector<string> vecArgv;
-
-		map<E_PROCESS_TYPE, Process*> mapProcess;
-
-		bool InitializeOptions(int iArgc, char* pcArgv[]);
-		bool InitializeCurrentPath(const string& strWorkingPath);
+		bool InitializeOptions(const vector<string> &args);
+		bool InitializeCurrentPath() const;
 
 	public:
-		EnvironmentVariable();
+		EnvironmentVariable() = default;
 		virtual ~EnvironmentVariable() = default;
 
-		bool Initialize(int iArgc, char* pcArgv[]);
-		bool InitializeLog();
+		bool Initialize(int argc, char *argv[]);
+		bool Initialize(const vector<string> &args);
 
-		string Usage();
+		string Usage() const;
 
-		bool GetStandAlone();
-		string GetConfigPath();
-		string GetProcessName();
-
-		gid_t GetGid();
-		void SetGid(const gid_t& gid);
-
-		uid_t GetUid();
-		void SetUid(const uid_t& uid);
-
-		pid_t GetParentPid();
-		void SetParentPid(const pid_t& pid);
-
-		pid_t GetChildPid();
-		void SetChildPid(const pid_t& pid);
-
-		bool GetCondition();
-		void SetCondition(const bool& bCondition);
-
-		Process* GetProcess(const E_PROCESS_TYPE& eProcessType);
-		void SetProcess(const E_PROCESS_TYPE& eProcessType, Process* pProcess);
+		bool GetStandAlone() const;
+		string GetConfigPath() const;
+		string GetBinaryName() const;
 };

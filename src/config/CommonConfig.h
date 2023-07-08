@@ -1,28 +1,30 @@
 #pragma once
 
-#include "FileLog.h"
-
 #include "Config.h"
+#include "FileLog.h"
+#include <string>
+
+using namespace std;
 
 class CommonConfig : public Config {
 	private:
-		string strWorkingPath;
+		LOG_LEVEL logLevel;
+		string workingPath;
+		string logOutputPath;
+		string logFileName;
+		bool logLinePrint;
+		bool logThreadMode;
 
-		E_LOG_LEVEL eLogLevel;
-		bool bThreadMode;
-		string strLogOutputPath;
-		string strLogFileNamePrefix;
-
-		virtual bool InitializeDerived();
+		virtual bool InitializeDerived() final;
 
 	public:
 		CommonConfig();
 		virtual ~CommonConfig() = default;
 
-		string GetWorkingPath();
-
-		E_LOG_LEVEL GetLogLevel();
-		bool GetThreadMode();
-		string GetLogOutputPath();
-		string GetLogFileNamePrefix();
+		LOG_LEVEL GetLogLevel() const;
+		string GetWorkingPath() const;
+		string GetLogOutputPath() const;
+		string GetLogFileName() const;
+		bool GetLogLinePrint() const;
+		bool GetLogThreadMode() const;
 };

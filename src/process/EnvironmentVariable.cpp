@@ -1,88 +1,73 @@
-#include <getopt.h>
-
-#include <cstring>
-
-#include "CommonConfig.h"
-#include "FileLog.h"
-#include "FileManager.h"
-
 #include "EnvironmentVariable.h"
+#include "CommonConfig.h"
+#include "FileManager.h"
+#include <cstring>
+#include <string>
+#include <vector>
 
-EnvironmentVariable::EnvironmentVariable()
-	: gid(-1), uid(-1), parentPid(-1), childPid(-1), bStandAlone(false),
-	  strConfigPath(""), strProcessName(""), bCondition(false), vecArgv({}),
-	  mapProcess({}) {
-	DEBUG_G(__PRETTY_FUNCTION__);
-}
+using namespace std;
 
-bool EnvironmentVariable::Initialize(int iArgc, char* pcArgv[]) {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	if (this->InitializeOptions(iArgc, pcArgv) == false) {
-		ERROR_L_G("InitializeOptions fail");
-		return false;
+bool EnvironmentVariable::Initialize(int argc, char *argv[]) {
+	if (argc == 0) {
+		return true;
 	}
 
-	CommonConfig commonConfig;
-	if (commonConfig.Initialize(this->strConfigPath) == false) {
-		ERROR_L_G("CommonConfig Initialize fail");
-		return false;
+	vector<string> args{};
+	for (int i = 0; i < argc; ++i) {
+		args.push_back(argv[i]);
 	}
 
-	if (this->InitializeCurrentPath(commonConfig.GetWorkingPath()) == false) {
-		ERROR_L_G("InitializeCurrentPath fail");
+	if (this->Initialize(args) == false) {
 		return false;
 	}
 
 	return true;
 }
 
-bool EnvironmentVariable::InitializeLog() {
-	DEBUG_G(__PRETTY_FUNCTION__);
+bool EnvironmentVariable::Initialize(const vector<string> &args) {
+	extern int optind;
+	optind = 1;
 
-	CommonConfig commonConfig;
-	if (commonConfig.Initialize(this->strConfigPath) == false) {
-		ERROR_L_G("CommonConfig Initialize fail");
+	if (args.empty()) {
+		return true;
+	}
+
+	if (this->InitializeOptions(args) == false) {
 		return false;
 	}
 
-	if (Singleton<FileLog>::Instance().Initialize(
-			commonConfig.GetLogLevel(), commonConfig.GetLogOutputPath(),
-			commonConfig.GetLogFileNamePrefix(), commonConfig.GetThreadMode()) == false) {
-		ERROR_L_G("FileLog Initialize fail");
+	if (this->InitializeCurrentPath() == false) {
 		return false;
 	}
 
 	return true;
 }
 
-bool EnvironmentVariable::InitializeOptions(int iArgc, char* pcArgv[]) {
-	DEBUG_G(__PRETTY_FUNCTION__);
+bool EnvironmentVariable::InitializeOptions(const vector<string> &args) {
+	vector<char *> argsToChar;
+	argsToChar.reserve(args.size());
 
-	if (iArgc == 0 || pcArgv == nullptr) {
-		ERROR_L_G("invalid argument");
-		return false;
+	for (auto &iter : args) {
+		argsToChar.push_back(const_cast<char *>(iter.c_str()));
 	}
 
-	this->bStandAlone = false;
-	this->strConfigPath = "";
+	this->standAlone = false;
+	this->configPath = "";
+	this->binaryName = args[0].substr(args[0].find_last_of('/') + 1);
 
-	char* pcStr = strrchr(pcArgv[0], '/');
-	this->strProcessName = pcStr ? pcStr + 1 : pcArgv[0];
-
-	int iOpt = 0;
-	while ((iOpt = getopt(iArgc, pcArgv, "c:s")) != -1) {
-		switch (iOpt) {
+	int opt = 0;
+	while ((opt = getopt(argsToChar.size(), argsToChar.data(), "c:s")) != -1) {
+		switch (opt) {
 		case 'c':
-			if (optarg && optarg[0]) {
-				this->strConfigPath = FileManager().ToAbsolutePath(optarg);
-			} else {
+			if (optarg == nullptr || strlen(optarg) == 0) {
 				return false;
 			}
 
+			this->configPath = FileManager::Instance().ToAbsolutePath(optarg);
+
 			break;
 		case 's':
-			this->bStandAlone = true;
+			this->standAlone = true;
 
 			break;
 		default:
@@ -90,134 +75,36 @@ bool EnvironmentVariable::InitializeOptions(int iArgc, char* pcArgv[]) {
 		}
 	}
 
-	for (int i = 0; i < iArgc; i++) {
-		this->vecArgv.push_back(pcArgv[0]);
-	}
-
 	return true;
 }
 
-bool EnvironmentVariable::InitializeCurrentPath(const string& strWorkingPath) {
-	DEBUG_G(__PRETTY_FUNCTION__);
+bool EnvironmentVariable::InitializeCurrentPath() const {
+	CommonConfig commonConfig;
+	if (commonConfig.Initialize(this->configPath) == false) {
+		return false;
+	}
 
-	if (strWorkingPath.empty()) {
+	const string workingPath = commonConfig.GetWorkingPath();
+
+	if (workingPath.empty()) {
 		return true;
 	}
 
-	if (FileManager().MakeDirs(strWorkingPath) == false) {
-		ERROR_L_G("MakeDirs fail - path : (%s), error : (%s)", strWorkingPath.c_str(),
-				  strerror(errno));
-
+	if (FileManager::Instance().MakeDirs(workingPath) == false) {
 		return false;
 	}
 
-	if (FileManager().SetCurrentPath(strWorkingPath) == false) {
-		ERROR_L_G("SetCurrentPath fail - path : (%s), error : (%s)",
-				  strWorkingPath.c_str(), strerror(errno));
-
+	if (FileManager::Instance().SetCurrentPath(workingPath) == false) {
 		return false;
 	}
 
 	return true;
 }
 
-string EnvironmentVariable::Usage() {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	char caBuffer[4096];
-	snprintf(caBuffer, sizeof(caBuffer), "usage: %s -c config_path [-s]",
-			 this->strProcessName.c_str());
-
-	return caBuffer;
+string EnvironmentVariable::Usage() const {
+	return "usage: " + this->binaryName + " -c config_path [-s]";
 }
 
-bool EnvironmentVariable::GetStandAlone() {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	return this->bStandAlone;
-}
-
-string EnvironmentVariable::GetConfigPath() {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	return this->strConfigPath;
-}
-
-string EnvironmentVariable::GetProcessName() {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	return this->strProcessName;
-}
-
-gid_t EnvironmentVariable::GetGid() {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	return this->gid;
-}
-
-void EnvironmentVariable::SetGid(const gid_t& gid) {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	this->gid = gid;
-}
-
-uid_t EnvironmentVariable::GetUid() {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	return this->uid;
-}
-
-void EnvironmentVariable::SetUid(const uid_t& uid) {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	this->uid = uid;
-}
-
-pid_t EnvironmentVariable::GetParentPid() {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	return this->parentPid;
-}
-
-void EnvironmentVariable::SetParentPid(const pid_t& pid) {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	this->parentPid = pid;
-}
-
-pid_t EnvironmentVariable::GetChildPid() {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	return this->childPid;
-}
-
-void EnvironmentVariable::SetChildPid(const pid_t& pid) {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	this->childPid = pid;
-}
-
-bool EnvironmentVariable::GetCondition() { return this->bCondition; }
-
-void EnvironmentVariable::SetCondition(const bool& bCondition) {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	this->bCondition.store(bCondition);
-}
-
-Process* EnvironmentVariable::GetProcess(const E_PROCESS_TYPE& eProcessType) {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	if (this->mapProcess.find(eProcessType) != this->mapProcess.end()) {
-		return this->mapProcess.at(eProcessType);
-	}
-
-	return nullptr;
-}
-
-void EnvironmentVariable::SetProcess(const E_PROCESS_TYPE& eProcessType,
-									 Process* pProcess) {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	this->mapProcess[eProcessType] = pProcess;
-}
+bool EnvironmentVariable::GetStandAlone() const { return this->standAlone; }
+string EnvironmentVariable::GetConfigPath() const { return this->configPath; }
+string EnvironmentVariable::GetBinaryName() const { return this->binaryName; }

@@ -1,13 +1,19 @@
 #pragma once
 
+#include "FileManager.h"
+#include <atomic>
+#include <condition_variable>
+#include <future>
 #include <map>
+#include <mutex>
+#include <source_location>
+#include <string>
+#include <string_view>
+#include <vector>
+
 using namespace std;
 
-#include <Singleton.h>
-
-#include <ThreadPool.h>
-
-enum class E_LOG_LEVEL {
+enum class LOG_LEVEL {
 	DEBUG = 0,
 	INFO,
 	WARNING,
@@ -15,95 +21,82 @@ enum class E_LOG_LEVEL {
 	CRITICAL,
 };
 
-static const map<E_LOG_LEVEL, string> GmapLogLevelInfo = {
-	{E_LOG_LEVEL::DEBUG, "DEBUG"},		 {E_LOG_LEVEL::INFO, "INFO"},
-	{E_LOG_LEVEL::WARNING, "WARNING"},	 {E_LOG_LEVEL::ERROR, "ERROR"},
-	{E_LOG_LEVEL::CRITICAL, "CRITICAL"},
+static const map<LOG_LEVEL, string_view> LOG_LEVEL_INFO = {
+	{LOG_LEVEL::DEBUG, "DEBUG"},	   {LOG_LEVEL::INFO, "INFO"},
+	{LOG_LEVEL::WARNING, "WARNING"},   {LOG_LEVEL::ERROR, "ERROR"},
+	{LOG_LEVEL::CRITICAL, "CRITICAL"},
 };
 
 class FileLog {
 	private:
-		mutex mutexLock;
+		atomic_bool condition;
+		atomic_bool initialize;
 
-		E_LOG_LEVEL eLogLevel;
+		LOG_LEVEL logLevel;
+		string outputPath;
+		string fileName;
+		atomic_bool linePrint;
+		atomic_bool threadMode;
 
-		string strFileName;
-		string strOutputPath;
-		string strFileNamePrefix;
+		mutable mutex mutexForSettings;
+		mutex mutexForCv;
 
-		atomic<bool> bThread;
-		vector<future<bool>> vecFuture;
-		unique_ptr<ThreadPool> uniqptrThreadPool;
+		mutex mutexForJobs;
+		vector<future<bool>> jobs;
 
-		bool Finalize();
+		future<void> futureForFlush;
 
-		bool IsPrint(const E_LOG_LEVEL& eLogLevel);
+		condition_variable cv;
 
-		string MakeFileName(const time_t& sTime);
-		string MakePrefixLog(const time_t& sTime, const E_LOG_LEVEL& eLogLevel);
+		string MakeLog(const LOG_LEVEL &logLevel, const bool &linePrint,
+					   const string &log, const tm &sTm,
+					   const source_location &sourceLocation);
+
+		string MakeFullPath(const string &outputPath, const string &fileName,
+							const tm &sTm);
+
+		bool Print(const LOG_LEVEL &logLevel, const string &outputPath,
+				   const string &fileName, const bool &linePrint,
+				   const string &log, const time_t &time,
+				   const source_location &sourceLocation);
+
+		bool Logging(const LOG_LEVEL &logLevel, const string &log,
+					 const source_location &sourceLocation);
 
 	public:
 		FileLog();
-		virtual ~FileLog();
 
-		bool Initialize(const E_LOG_LEVEL& eLogLevel, const string& strOutputPath,
-						const string& strFileNamePrefix, const bool& bThread);
+		~FileLog();
 
-		bool Logging(const E_LOG_LEVEL& eLogLevel, const string& strFormat, ...);
-		bool LoggingWithSourceLocation(const E_LOG_LEVEL& eLogLevel,
-									   const string& strFileName, const int& iFileLine,
-									   const string& strFormat, ...);
+		bool Initialize(const LOG_LEVEL &logLevel, const string &outputPath,
+						const string &fileName, const bool &linePrint,
+						const bool &threadMode);
+
+		bool Debug(const string &log, const source_location &sourceLocation =
+										  source_location::current());
+		bool Info(const string &log, const source_location &sourceLocation =
+										 source_location::current());
+		bool Warning(const string &log, const source_location &sourceLocation =
+											source_location::current());
+		bool Error(const string &log, const source_location &sourceLocation =
+										  source_location::current());
+		bool Critical(const string &log, const source_location &sourceLocation =
+											 source_location::current());
 
 		bool Flush();
 
-		void SetThread(const bool& bThread);
+		LOG_LEVEL GetLogLevel() const;
+		void SetLogLevel(const LOG_LEVEL &logLevel);
+
+		string GetOutputPath() const;
+		void SetOutputPath(const string &outputPath);
+
+		string GetFileName() const;
+		void SetFileName(const string &fileName);
+
+		bool GetLinePrint() const;
+		void SetLinePrint(const bool &linePrint);
+
+		bool GetThreadMode() const;
+		void SetThreadMode(const bool &threadMode);
 };
-
-#define DEBUG(fileLog, args...) fileLog.Logging(E_LOG_LEVEL::DEBUG, ##args)
-#define DEBUG_L(fileLog, args...)                                                        \
-	fileLog.LoggingWithSourceLocation(E_LOG_LEVEL::DEBUG, __builtin_FILE(),              \
-									  __builtin_LINE(), ##args)
-#define DEBUG_G(args...)                                                                 \
-	Singleton<FileLog>::Instance().Logging(E_LOG_LEVEL::DEBUG, ##args)
-#define DEBUG_L_G(args...)                                                               \
-	Singleton<FileLog>::Instance().LoggingWithSourceLocation(                            \
-		E_LOG_LEVEL::DEBUG, __builtin_FILE(), __builtin_LINE(), ##args)
-
-#define INFO(fileLog, args...) fileLog.Logging(E_LOG_LEVEL::INFO, ##args)
-#define INFO_L(fileLog, args...)                                                         \
-	fileLog.LoggingWithSourceLocation(E_LOG_LEVEL::INFO, __builtin_FILE(),               \
-									  __builtin_LINE(), ##args)
-#define INFO_G(args...) Singleton<FileLog>::Instance().Logging(E_LOG_LEVEL::INFO, ##args)
-#define INFO_L_G(args...)                                                                \
-	Singleton<FileLog>::Instance().LoggingWithSourceLocation(                            \
-		E_LOG_LEVEL::INFO, __builtin_FILE(), __builtin_LINE(), ##args)
-
-#define WARNING(fileLog, args...) fileLog.Logging(E_LOG_LEVEL::WARNING, ##args)
-#define WARNING_L(fileLog, args...)                                                      \
-	fileLog.LoggingWithSourceLocation(E_LOG_LEVEL::WARNING, __builtin_FILE(),            \
-									  __builtin_LINE(), ##args)
-#define WARNING_G(args...)                                                               \
-	Singleton<FileLog>::Instance().Logging(E_LOG_LEVEL::WARNING, ##args)
-#define WARNING_L_G(args...)                                                             \
-	Singleton<FileLog>::Instance().LoggingWithSourceLocation(                            \
-		E_LOG_LEVEL::WARNING, __builtin_FILE(), __builtin_LINE(), ##args)
-
-#define ERROR(fileLog, args...) fileLog.Logging(E_LOG_LEVEL::ERROR, ##args)
-#define ERROR_L(fileLog, args...)                                                        \
-	fileLog.LoggingWithSourceLocation(E_LOG_LEVEL::ERROR, __builtin_FILE(),              \
-									  __builtin_LINE(), ##args)
-#define ERROR_G(args...)                                                                 \
-	Singleton<FileLog>::Instance().Logging(E_LOG_LEVEL::ERROR, ##args)
-#define ERROR_L_G(args...)                                                               \
-	Singleton<FileLog>::Instance().LoggingWithSourceLocation(                            \
-		E_LOG_LEVEL::ERROR, __builtin_FILE(), __builtin_LINE(), ##args)
-
-#define CRITICAL(fileLog, args...) fileLog.Logging(E_LOG_LEVEL::CRITICAL, ##args)
-#define CRITICAL_L(fileLog, args...)                                                     \
-	fileLog.LoggingWithSourceLocation(E_LOG_LEVEL::CRITICAL, __builtin_FILE(),           \
-									  __builtin_LINE(), ##args)
-#define CRITICAL_G(args...)                                                              \
-	Singleton<FileLog>::Instance().Logging(E_LOG_LEVEL::CRITICAL, ##args)
-#define CRITICAL_L_G(args...)                                                            \
-	Singleton<FileLog>::Instance().LoggingWithSourceLocation(                            \
-		E_LOG_LEVEL::CRITICAL, __builtin_FILE(), __builtin_LINE(), ##args)

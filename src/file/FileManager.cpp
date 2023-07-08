@@ -1,24 +1,26 @@
+#include "FileManager.h"
 #include <fcntl.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
-#include <cstring>
 #include <fstream>
 #include <functional>
+#include <string>
+#include <tuple>
+#include <unistd.h>
+#include <vector>
+
 using namespace std;
 
-#include "FileManager.h"
-
-template <class T> static T Run(const function<T(error_code&)>& func);
+template <class T> static T run(const function<T(error_code &)> &func);
 
 template <class T>
-static T Run(const function<T(const string&, error_code&)>& func, const string& strPath);
+static T run(const function<T(const string &, error_code &)> &func,
+			 const string &path);
 
 template <class T>
-static T Run(const function<T(const string&, const string&, error_code&)>& func,
-			 const string& strFromPath, const string& strToPath);
+static T
+run(const function<T(const string &, const string &, error_code &)> &func,
+	const string &fromPath, const string &toPath);
 
-template <class T> static T Run(const function<T(error_code&)>& func) {
+template <class T> static T run(const function<T(error_code &)> &func) {
 	error_code errorCode;
 	errorCode.clear();
 
@@ -30,11 +32,12 @@ template <class T> static T Run(const function<T(error_code&)>& func) {
 }
 
 template <class T>
-static T Run(const function<T(const string&, error_code&)>& func, const string& strPath) {
+static T run(const function<T(const string &, error_code &)> &func,
+			 const string &path) {
 	error_code errorCode;
 	errorCode.clear();
 
-	const T result = func(strPath, errorCode);
+	const T result = func(path, errorCode);
 
 	errno = errorCode.value();
 
@@ -42,287 +45,275 @@ static T Run(const function<T(const string&, error_code&)>& func, const string& 
 }
 
 template <class T>
-static T Run(const function<T(const string&, const string&, error_code&)>& func,
-			 const string& strFromPath, const string& strToPath) {
+static T
+run(const function<T(const string &, const string &, error_code &)> &func,
+	const string &fromPath, const string &toPath) {
 	error_code errorCode;
 	errorCode.clear();
 
-	const T result = func(strFromPath, strToPath, errorCode);
+	const T result = func(fromPath, toPath, errorCode);
 
 	errno = errorCode.value();
 
 	return result;
 }
 
-bool FileManager::IsExist(const string& strPath) {
-	auto job = [&](const string& strPath, error_code& errorCode) -> auto{
-		return filesystem::exists(filesystem::path(strPath), errorCode);
+bool FileManager::IsExist(const string &path) const {
+	const auto job = [](const string &path, error_code &errorCode) {
+		return filesystem::exists(filesystem::path(path), errorCode);
 	};
 
-	return Run<bool>(job, strPath);
+	return run<bool>(job, path);
 }
 
-bool FileManager::IsRegularFile(const string& strPath) {
-	auto job = [&](const string& strPath, error_code& errorCode) -> auto{
-		return filesystem::is_regular_file(filesystem::path(strPath), errorCode);
+bool FileManager::IsRegularFile(const string &path) const {
+	const auto job = [](const string &path, error_code &errorCode) {
+		return filesystem::is_regular_file(filesystem::path(path), errorCode);
 	};
 
-	return Run<bool>(job, strPath);
+	return run<bool>(job, path);
 }
 
-bool FileManager::IsDirectory(const string& strPath) {
-	auto job = [&](const string& strPath, error_code& errorCode) -> auto{
-		return filesystem::is_directory(filesystem::path(strPath), errorCode);
+bool FileManager::IsDirectory(const string &path) const {
+	const auto job = [](const string &path, error_code &errorCode) {
+		return filesystem::is_directory(filesystem::path(path), errorCode);
 	};
 
-	return Run<bool>(job, strPath);
+	return run<bool>(job, path);
 }
 
-int FileManager::LockBetweenProcess(const string& strPath) {
-	const mode_t mode = 0775;
-	const int iFD = open(strPath.c_str(), O_CREAT | O_RDWR, mode);
-	if (iFD < 0) {
+int FileManager::LockBetweenProcess(const string &path,
+									const mode_t &mode) const {
+	const int fd = open(path.c_str(), O_CREAT | O_RDWR, mode);
+	if (fd < 0) {
 		return -1;
 	}
 
-	flock sFlock;
-	sFlock.l_type = F_RDLCK | F_WRLCK;
-	sFlock.l_start = 0;
-	sFlock.l_whence = SEEK_SET;
-	sFlock.l_len = 0;
-
-	if (fcntl(iFD, F_SETLK, &sFlock) == -1) {
-		close(iFD);
+	if (this->LockBetweenProcess(fd) == false) {
+		close(fd);
 
 		return -1;
 	}
 
-	return iFD;
+	return fd;
 }
 
-bool FileManager::LockBetweenProcess(const int& iFD) {
-	flock sFlock;
-	sFlock.l_type = F_RDLCK | F_WRLCK;
-	sFlock.l_start = 0;
-	sFlock.l_whence = SEEK_SET;
-	sFlock.l_len = 0;
+bool FileManager::LockBetweenProcess(const int &fd) const {
+	flock lock;
+	lock.l_type = F_RDLCK | F_WRLCK;
+	lock.l_start = 0;
+	lock.l_whence = SEEK_SET;
+	lock.l_len = 0;
 
-	if (fcntl(iFD, F_SETLK, &sFlock) == -1) {
+	if (fcntl(fd, F_SETLK, &lock) == -1) {
 		return false;
 	}
 
 	return true;
 }
 
-bool FileManager::UnLockBetweenProcess(const int& iFD) {
-	flock sFlock;
-	sFlock.l_type = F_UNLCK;
-	sFlock.l_start = 0;
-	sFlock.l_whence = SEEK_SET;
-	sFlock.l_len = 0;
+bool FileManager::UnLockBetweenProcess(const int &fd) const {
+	flock lock;
+	lock.l_type = F_UNLCK;
+	lock.l_start = 0;
+	lock.l_whence = SEEK_SET;
+	lock.l_len = 0;
 
-	if (fcntl(iFD, F_SETLK, &sFlock) == -1) {
+	if (fcntl(fd, F_SETLK, &lock) == -1) {
 		return false;
 	}
 
 	return true;
 }
 
-bool FileManager::Read(const string& strPath, string& strResult) {
-	strResult.clear();
-
+tuple<bool, string> FileManager::Read(const string &path) const {
 	ifstream ifs;
 
-	ifs.open(strPath);
-
+	ifs.open(path);
 	if (ifs.is_open() == false) {
-		return false;
+		return make_tuple(false, "");
 	}
 
 	ifs.seekg(0, ios::end);
 
-	const int iSize = ifs.tellg();
+	const int size = ifs.tellg();
 
-	strResult.resize(iSize);
+	string result = "";
+	result.resize(size);
 
 	ifs.seekg(0, ios::beg);
 
-	ifs.read(&strResult[0], iSize);
+	ifs.read(&result[0], size);
 
-	return true;
+	return make_tuple(true, result);
 }
 
-bool FileManager::Write(const string& strPath, const string& strData,
-						const ios_base::openmode& openMode) {
+bool FileManager::Write(const string &path, const string &data,
+						const ios_base::openmode &openMode) const {
 	ofstream ofs;
 
-	ofs.open(strPath, openMode);
-
+	ofs.open(path, openMode);
 	if (ofs.is_open() == false) {
 		return false;
 	}
 
-	ofs << strData;
+	ofs << data;
 
 	ofs.close();
 
 	return true;
 }
 
-bool FileManager::MakeDir(const string& strPath) {
-	if (this->IsExist(strPath) && this->IsDirectory(strPath)) {
+bool FileManager::MakeDir(const string &path) const {
+	if (this->IsExist(path) && this->IsDirectory(path)) {
 		return true;
 	}
 
-	auto job = [&](const string& strPath, error_code& errorCode) -> auto{
-		return filesystem::create_directory(filesystem::path(strPath), errorCode);
+	const auto job = [](const string &path, error_code &errorCode) {
+		return filesystem::create_directory(filesystem::path(path), errorCode);
 	};
 
-	return Run<bool>(job, strPath);
+	return run<bool>(job, path);
 }
 
-bool FileManager::MakeDirs(const string& strPath) {
-	if (this->IsExist(strPath) && this->IsDirectory(strPath)) {
+bool FileManager::MakeDirs(const string &path) const {
+	if (this->IsExist(path) && this->IsDirectory(path)) {
 		return true;
 	}
 
-	auto job = [&](const string& strPath, error_code& errorCode) -> auto{
-		return filesystem::create_directories(filesystem::path(strPath), errorCode);
+	const auto job = [](const string &path, error_code &errorCode) {
+		return filesystem::create_directories(filesystem::path(path),
+											  errorCode);
 	};
 
-	return Run<bool>(job, strPath);
+	return run<bool>(job, path);
 }
 
-bool FileManager::Copy(const string& strFromPath, const string& strToPath) {
-	auto job = [&](const string& strFromPath, const string& strToPath,
-				   error_code& errorCode) -> auto{
-		filesystem::copy(filesystem::path(strFromPath), filesystem::path(strToPath),
-						 errorCode);
-		return !errorCode;
-	};
-
-	return Run<bool>(job, strFromPath, strToPath);
-}
-
-bool FileManager::Copy(const string& strFromPath, const string& strToPath,
-					   filesystem::copy_options options) {
+bool FileManager::Copy(const string &fromPath, const string &toPath,
+					   filesystem::copy_options options) const {
 	error_code errorCode;
 	errorCode.clear();
 
-	filesystem::copy(filesystem::path(strFromPath), filesystem::path(strToPath), options,
-					 errorCode);
+	filesystem::copy(filesystem::path(fromPath), filesystem::path(toPath),
+					 options, errorCode);
 
 	errno = errorCode.value();
 
 	return !errorCode;
 }
 
-bool FileManager::CopyAll(const string& strFromPath, const string& strToPath) {
-	auto job = [&](const string& strFromPath, const string& strToPath,
-				   error_code& errorCode) -> auto{
-		filesystem::copy(filesystem::path(strFromPath), filesystem::path(strToPath),
+bool FileManager::CopyAll(const string &fromPath, const string &toPath) const {
+	const auto job = [](const string &fromPath, const string &toPath,
+						error_code &errorCode) {
+		filesystem::copy(filesystem::path(fromPath), filesystem::path(toPath),
 						 filesystem::copy_options::recursive, errorCode);
 
 		return !errorCode;
 	};
 
-	return Run<bool>(job, strFromPath, strToPath);
+	return run<bool>(job, fromPath, toPath);
 }
 
-bool FileManager::Remove(const string& strPath) {
-	auto job = [&](const string& strPath, error_code& errorCode) -> auto{
-		return filesystem::remove(filesystem::path(strPath), errorCode);
+bool FileManager::Remove(const string &path) const {
+	const auto job = [](const string &path, error_code &errorCode) {
+		return filesystem::remove(filesystem::path(path), errorCode);
 	};
 
-	return Run<bool>(job, strPath);
+	return run<bool>(job, path);
 }
 
-bool FileManager::RemoveAll(const string& strPath) {
-	auto job = [&](const string& strPath, error_code& errorCode) -> auto{
-		return filesystem::remove_all(filesystem::path(strPath), errorCode);
+bool FileManager::RemoveAll(const string &path) const {
+	const auto job = [](const string &path, error_code &errorCode) {
+		return filesystem::remove_all(filesystem::path(path), errorCode);
 	};
 
-	return Run<bool>(job, strPath);
+	return run<bool>(job, path);
 }
 
-string FileManager::ToAbsolutePath(const string& strPath) {
-	auto job = [&](const string& strPath, error_code& errorCode) -> auto{
-		return filesystem::absolute(filesystem::path(strPath), errorCode);
+string FileManager::ToAbsolutePath(const string &path) const {
+	const auto job = [](const string &path, error_code &errorCode) {
+		return filesystem::absolute(filesystem::path(path), errorCode);
 	};
 
-	return Run<string>(job, strPath);
+	return run<string>(job, path);
 }
 
-string FileManager::ToCanonicalPath(const string& strPath) {
-	auto job = [&](const string& strPath, error_code& errorCode) -> auto{
-		return filesystem::canonical(filesystem::path(strPath), errorCode);
+string FileManager::ToCanonicalPath(const string &path) const {
+	const auto job = [](const string &path, error_code &errorCode) {
+		return filesystem::canonical(filesystem::path(path), errorCode);
 	};
 
-	return Run<string>(job, strPath);
+	return run<string>(job, path);
 }
 
-string FileManager::ToRelativePathToRootPath(const string& strPath) {
-	return filesystem::path(strPath).relative_path();
+string FileManager::ToRelativePathToRootPath(const string &path) const {
+	return filesystem::path(path).relative_path();
 }
 
-string FileManager::GetTempPath() {
-	auto job = [&](error_code & errorCode) -> auto{
+string FileManager::GetTempPath() const {
+	const auto job = [](error_code &errorCode) {
 		return filesystem::temp_directory_path(errorCode);
 	};
 
-	return Run<string>(job);
+	return run<string>(job);
 }
 
-string FileManager::GetRootPath(const string& strPath) {
-	return filesystem::path(strPath).root_directory();
+string FileManager::GetRootPath(const string &path) const {
+	return filesystem::path(path).root_directory();
 }
 
-string FileManager::GetRelativePath(const string& strPath) {
-	auto job = [&](const string& strPath, error_code& errorCode) -> auto{
-		return filesystem::relative(filesystem::path(strPath), errorCode);
+string FileManager::GetRelativePath(const string &path) const {
+	const auto job = [](const string &path, error_code &errorCode) {
+		return filesystem::relative(filesystem::path(path), errorCode);
 	};
 
-	return Run<string>(job, strPath);
+	return run<string>(job, path);
 }
 
-vector<string> FileManager::GetPathList(const string& strPath) {
-	vector<string> vecPath;
-	vecPath.clear();
+vector<string> FileManager::GetSubDirectories(const string &path) const {
+	vector<string> paths;
+	paths.clear();
 
-	for (const filesystem::directory_entry& iter :
-		 filesystem::directory_iterator(strPath)) {
-		vecPath.push_back(iter.path());
+	for (const filesystem::directory_entry &iter :
+		 filesystem::directory_iterator(path)) {
+		paths.push_back(iter.path());
 	}
 
-	return vecPath;
+	return paths;
 }
 
-vector<string> FileManager::GetRecursivePathList(const string& strPath) {
-	vector<string> vecPath;
-	vecPath.clear();
+vector<string>
+FileManager::GetRecursiveSubDirectories(const string &path) const {
+	vector<string> paths;
+	paths.clear();
 
-	for (const filesystem::directory_entry& iter :
-		 filesystem::recursive_directory_iterator(strPath)) {
-		vecPath.push_back(iter.path());
+	for (const filesystem::directory_entry &iter :
+		 filesystem::recursive_directory_iterator(path)) {
+		paths.push_back(iter.path());
 	}
 
-	return vecPath;
+	return paths;
 }
 
-string FileManager::GetCurrentPath() {
-	auto job = [&](error_code & errorCode) -> auto{
+string FileManager::GetCurrentPath() const {
+	const auto job = [](error_code &errorCode) {
 		return filesystem::current_path(errorCode);
 	};
 
-	return Run<string>(job);
+	return run<string>(job);
 }
 
-bool FileManager::SetCurrentPath(const string& strPath) {
-	auto job = [&](const string& strPath, error_code& errorCode) -> auto{
-		filesystem::current_path(filesystem::path(strPath), errorCode);
+bool FileManager::SetCurrentPath(const string &path) const {
+	const auto job = [](const string &path, error_code &errorCode) {
+		filesystem::current_path(filesystem::path(path), errorCode);
 
 		return !errorCode;
 	};
 
-	return Run<bool>(job, strPath);
+	return run<bool>(job, path);
+}
+
+FileManager &FileManager::Instance() {
+	static FileManager fileManager;
+	return fileManager;
 }

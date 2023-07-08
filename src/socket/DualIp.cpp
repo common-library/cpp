@@ -1,100 +1,94 @@
-#include <arpa/inet.h>
-
+#include "DualIp.h"
 #include <algorithm>
+#include <arpa/inet.h>
 #include <cstring>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <string>
+
 using namespace std;
 
-#include "DualIp.h"
-
-DualIp::DualIp(const sockaddr_storage& sSockAddrStorage)
-	: eIpType(IPTYPE::NOTMATCHED), sInAddr({}), sIn6Addr({}), iPort(0),
-	  psAddrInfo(nullptr) {
-	this->Initialize(sSockAddrStorage);
+DualIp::DualIp(const sockaddr_storage &sockAddrStorage)
+	: address(""), port(0), ipType(IP_TYPE::NOTMATCHED), inAddr({}),
+	  in6Addr({}), addrInfo(nullptr) {
+	this->Initialize(sockAddrStorage);
 }
 
-DualIp::DualIp(const string& strAddress, const in_port_t& iPort)
-	: eIpType(IPTYPE::NOTMATCHED), sInAddr({}), sIn6Addr({}), iPort(iPort),
-	  psAddrInfo(nullptr) {
-	this->Initialize(strAddress);
+DualIp::DualIp(const string &address, const in_port_t &port)
+	: address(address), port(port), ipType(IP_TYPE::NOTMATCHED), inAddr({}),
+	  in6Addr({}), addrInfo(nullptr) {
+	this->Initialize(this->address);
 }
 
 DualIp::~DualIp() { this->Finalize(); }
 
-bool DualIp::Initialize(const string& strAddress) {
-	if (this->Valid(strAddress)) {
-		this->AddressToStruct(strAddress);
-	} else {
-		addrinfo* psAddrInfo = nullptr;
-		addrinfo* psAddrInfoTemp = nullptr;
+bool DualIp::Initialize(const string &address) {
+	this->Finalize();
 
-		if (this->GetAddrInfo(strAddress, 0, AF_UNSPEC, SOCK_STREAM, AI_CANONNAME,
-							  &psAddrInfo) == false) {
-			if (psAddrInfo) {
-				this->FreeAddrInfo(*psAddrInfo);
-				psAddrInfo = nullptr;
-			}
-			return false;
-		}
-
-		psAddrInfoTemp = psAddrInfo;
-		while (psAddrInfoTemp) {
-			void* vAddr = nullptr;
-			switch (psAddrInfoTemp->ai_family) {
-			case AF_INET:
-				vAddr = &((sockaddr_in*)psAddrInfoTemp->ai_addr)->sin_addr;
-				break;
-			case AF_INET6:
-				vAddr = &((sockaddr_in6*)psAddrInfoTemp->ai_addr)->sin6_addr;
-				break;
-			default:
-				vAddr = nullptr;
-				break;
-			}
-
-			if (vAddr) {
-				char caAddress[INET6_ADDRSTRLEN];
-				memset(caAddress, 0x00, sizeof(caAddress));
-				if (inet_ntop(psAddrInfoTemp->ai_family, vAddr, caAddress,
-							  sizeof(caAddress))) {
-					this->AddressToStruct(caAddress);
-					break;
-				}
-			}
-
-			psAddrInfoTemp = psAddrInfoTemp->ai_next;
-		}
-
-		if (psAddrInfo) {
-			this->FreeAddrInfo(*psAddrInfo);
-			psAddrInfo = nullptr;
-		}
+	if (this->Valid(address)) {
+		return this->AddressToStruct(address) && this->Valid();
 	}
+
+	addrinfo *addrInfo =
+		this->GetAddrInfo(address, 0, AF_UNSPEC, SOCK_STREAM, AI_CANONNAME);
+
+	addrinfo *addrInfoTemp = addrInfo;
+	while (addrInfoTemp) {
+		void *addr = nullptr;
+		switch (addrInfoTemp->ai_family) {
+		case AF_INET:
+			addr = &((sockaddr_in *)addrInfoTemp->ai_addr)->sin_addr;
+			break;
+		case AF_INET6:
+			addr = &((sockaddr_in6 *)addrInfoTemp->ai_addr)->sin6_addr;
+			break;
+		default:
+			addr = nullptr;
+			break;
+		}
+
+		if (addr) {
+			char addressTemp[INET6_ADDRSTRLEN];
+			memset(addressTemp, 0x00, sizeof(addressTemp));
+			if (inet_ntop(addrInfoTemp->ai_family, addr, addressTemp,
+						  sizeof(addressTemp))) {
+				this->AddressToStruct(addressTemp);
+				break;
+			}
+		}
+
+		addrInfoTemp = addrInfoTemp->ai_next;
+	}
+
+	this->Finalize(&addrInfo);
 
 	return this->Valid();
 }
 
-bool DualIp::Initialize(const sockaddr_storage& sSockAddrStorage) {
-	switch (sSockAddrStorage.ss_family) {
+bool DualIp::Initialize(const sockaddr_storage &sockAddrStorage) {
+	this->Finalize();
+
+	switch (sockAddrStorage.ss_family) {
 	case AF_INET:
-		this->eIpType = IPTYPE::V4MAPPED;
-		this->sInAddr = (in_addr)((sockaddr_in*)&sSockAddrStorage)->sin_addr;
-		this->sIn6Addr.s6_addr32[0] = 0;
-		this->sIn6Addr.s6_addr32[1] = 0;
-		this->sIn6Addr.s6_addr32[2] = htonl(0xffff);
-		this->sIn6Addr.s6_addr32[3] = this->sInAddr.s_addr;
-		this->iPort = ((sockaddr_in*)&sSockAddrStorage)->sin_port;
+		this->ipType = IP_TYPE::V4MAPPED;
+		this->inAddr = (in_addr)((sockaddr_in *)&sockAddrStorage)->sin_addr;
+		this->in6Addr.s6_addr32[0] = 0;
+		this->in6Addr.s6_addr32[1] = 0;
+		this->in6Addr.s6_addr32[2] = htonl(0xffff);
+		this->in6Addr.s6_addr32[3] = this->inAddr.s_addr;
+		this->port = ((sockaddr_in *)&sockAddrStorage)->sin_port;
 
 		break;
 	case AF_INET6:
-		this->sIn6Addr = ((sockaddr_in6*)&sSockAddrStorage)->sin6_addr;
-		this->eIpType = this->GetIpType();
+		this->in6Addr = ((sockaddr_in6 *)&sockAddrStorage)->sin6_addr;
+		this->ipType = this->GetIpType();
 
-		switch (this->eIpType) {
-		case IPTYPE::V4MAPPED:
-			this->sInAddr.s_addr = this->sIn6Addr.s6_addr32[3];
+		switch (this->ipType) {
+		case IP_TYPE::V4MAPPED:
+			this->inAddr.s_addr = this->in6Addr.s6_addr32[3];
 			break;
-		case IPTYPE::NOTMATCHED:
-		case IPTYPE::UNSPECIFIED:
+		case IP_TYPE::NOTMATCHED:
+		case IP_TYPE::UNSPECIFIED:
 			return false;
 		default:
 			break;
@@ -109,157 +103,146 @@ bool DualIp::Initialize(const sockaddr_storage& sSockAddrStorage) {
 }
 
 bool DualIp::Finalize() {
-	if (this->psAddrInfo) {
-		this->FreeAddrInfo(*this->psAddrInfo);
-		this->psAddrInfo = nullptr;
+	this->Finalize(&this->addrInfo);
+
+	return true;
+}
+
+bool DualIp::Finalize(addrinfo **addrInfo) {
+	if (*addrInfo) {
+		freeaddrinfo(*addrInfo);
+		*addrInfo = nullptr;
 	}
 
 	return true;
 }
 
-bool DualIp::Valid() {
-	int iRet = -1;
+bool DualIp::Valid() const {
+	int result = -1;
 
-	if (this->eIpType == IPTYPE::V4MAPPED) {
-		iRet = !(this->sInAddr.s_addr);
+	if (this->ipType == IP_TYPE::V4MAPPED) {
+		result = !(this->inAddr.s_addr);
 	} else {
-		iRet = !(this->sIn6Addr.s6_addr32[0] || this->sIn6Addr.s6_addr32[1] ||
-				 this->sIn6Addr.s6_addr32[2] || this->sIn6Addr.s6_addr32[3]);
+		result = !(this->in6Addr.s6_addr32[0] || this->in6Addr.s6_addr32[1] ||
+				   this->in6Addr.s6_addr32[2] || this->in6Addr.s6_addr32[3]);
 	}
 
-	return iRet == 0 ? true : false;
+	return result == 0 ? true : false;
 }
 
-bool DualIp::Valid(const string& strAddress) {
-	in6_addr sIn6Addr;
+bool DualIp::Valid(const string &address) const {
+	in_addr inAddr;
+	in6_addr in6Addr;
 
-	if (inet_pton(AF_INET, strAddress.c_str(), &sIn6Addr) == 1 ||
-		inet_pton(AF_INET6, strAddress.c_str(), &sIn6Addr) == 1) {
-		return true;
+	if (inet_pton(AF_INET, address.c_str(), &inAddr) != 1 &&
+		inet_pton(AF_INET6, address.c_str(), &in6Addr) != 1) {
+		return false;
 	}
 
-	return false;
+	return true;
 }
 
-string DualIp::StructToAddress() {
-	char caAddress[INET6_ADDRSTRLEN];
-	memset(caAddress, 0x00, sizeof(caAddress));
+string DualIp::StructToAddress() const {
+	char address[INET6_ADDRSTRLEN];
+	memset(address, 0x00, sizeof(address));
 
-	const char* pcResult = nullptr;
-	if (this->eIpType == IPTYPE::V4MAPPED) {
-		pcResult = inet_ntop(AF_INET, &this->sInAddr, caAddress, sizeof(caAddress));
+	const char *result = nullptr;
+	if (this->ipType == IP_TYPE::V4MAPPED) {
+		result = inet_ntop(AF_INET, &this->inAddr, address, sizeof(address));
 	} else {
-		pcResult = inet_ntop(AF_INET6, &this->sIn6Addr, caAddress, sizeof(caAddress));
+		result = inet_ntop(AF_INET6, &this->in6Addr, address, sizeof(address));
 	}
 
-	return pcResult ? caAddress : "";
+	return result ? address : "";
 }
 
-bool DualIp::AddressToStruct(const string& strAddress) {
-	int iFamily = AF_INET;
-	any_of(strAddress.begin(), strAddress.end(), [&](const char& cValue) {
+bool DualIp::AddressToStruct(const string &address) {
+	this->ipType = this->GetIpType();
+
+	if (this->ipType == IP_TYPE::V4MAPPED) {
+		if (inet_pton(AF_INET, address.c_str(), &this->inAddr) != 1) {
+			return false;
+		}
+	}
+
+	int family = AF_INET;
+	any_of(address.begin(), address.end(), [&family](const char &cValue) {
 		if (cValue == ':') {
-			iFamily = AF_INET6;
+			family = AF_INET6;
 		}
 
 		return '\0';
 	});
 
-	char caIP[INET6_ADDRSTRLEN];
-	sprintf(caIP, "%s%s", iFamily == AF_INET ? "::ffff:" : "", strAddress.c_str());
-
-	const string strIP((iFamily == AF_INET ? "::ffff:" : "") + strAddress);
-
-	if (inet_pton(AF_INET6, (char*)caIP, &this->sIn6Addr) != 1) {
-		return false;
-	}
-
-	this->eIpType = this->GetIpType();
-
-	if (this->eIpType == IPTYPE::V4MAPPED) {
-		if (inet_pton(AF_INET, strAddress.c_str(), &this->sInAddr) != 1) {
-			return false;
-		}
-	}
-
-	return true;
-}
-
-DualIp::IPTYPE DualIp::GetIpType() {
-	IPTYPE eIpType = IPTYPE::OTHERIPV6;
-
-	if (IN6_IS_ADDR_UNSPECIFIED(&this->sIn6Addr)) {
-		eIpType = IPTYPE::UNSPECIFIED;
-	} else if (IN6_IS_ADDR_LOOPBACK(&this->sIn6Addr)) {
-		eIpType = IPTYPE::LOOPBACK;
-	} else if (IN6_IS_ADDR_MULTICAST(&this->sIn6Addr)) {
-		eIpType = IPTYPE::MULTICAST;
-	} else if (IN6_IS_ADDR_LINKLOCAL(&this->sIn6Addr)) {
-		eIpType = IPTYPE::LINKLOCAL;
-	} else if (IN6_IS_ADDR_SITELOCAL(&this->sIn6Addr)) {
-		eIpType = IPTYPE::SITELOCAL;
-	} else if (IN6_IS_ADDR_V4COMPAT(&this->sIn6Addr)) {
-		eIpType = IPTYPE::V4COMPAT;
-	} else if (IN6_IS_ADDR_MC_NODELOCAL(&this->sIn6Addr)) {
-		eIpType = IPTYPE::NODELOCAL;
-	} else if (IN6_IS_ADDR_MC_LINKLOCAL(&this->sIn6Addr)) {
-		eIpType = IPTYPE::LINKLOCAL;
-	} else if (IN6_IS_ADDR_MC_SITELOCAL(&this->sIn6Addr)) {
-		eIpType = IPTYPE::SITELOCAL;
-	} else if (IN6_IS_ADDR_MC_ORGLOCAL(&this->sIn6Addr)) {
-		eIpType = IPTYPE::ORGLOCAL;
-	} else if (IN6_IS_ADDR_MC_GLOBAL(&this->sIn6Addr)) {
-		eIpType = IPTYPE::GLOBAL;
-	} else if (IN6_IS_ADDR_V4MAPPED(&this->sIn6Addr)) {
-		eIpType = IPTYPE::V4MAPPED;
-	}
-
-	return eIpType;
-}
-
-bool DualIp::GetAddrInfo(const string& strAddress, const in_port_t& iPort,
-						 const int& iFamily, const int& iSockType, const int& iFlags,
-						 addrinfo** ppAddrInfo) {
-	addrinfo sAddrInfo;
-
-	memset(&sAddrInfo, 0, sizeof(sAddrInfo));
-
-	if (strAddress.empty()) {
-		sAddrInfo.ai_flags = AI_PASSIVE;
-	}
-
-	sAddrInfo.ai_family = iFamily;
-	sAddrInfo.ai_socktype = iSockType;
-	sAddrInfo.ai_flags |= iFlags;
-
-	char szTemp[256];
-	sprintf(szTemp, "%d", iPort);
-
-	const int iRet = getaddrinfo(strAddress.c_str(), iPort > 0 ? szTemp : nullptr,
-								 &sAddrInfo, ppAddrInfo);
-	if (iRet < 0) {
+	const string ip((family == AF_INET ? "::ffff:" : "") + address);
+	if (inet_pton(AF_INET6, ip.c_str(), &this->in6Addr) != 1) {
 		return false;
 	}
 
 	return true;
 }
 
-bool DualIp::FreeAddrInfo(addrinfo& sAddrInfo) {
-	freeaddrinfo(&sAddrInfo);
+DualIp::IP_TYPE DualIp::GetIpType() const {
+	IP_TYPE ipType = IP_TYPE::OTHERIPV6;
 
-	return true;
-}
-
-addrinfo* DualIp::GetAddrInfo() {
-	if (this->psAddrInfo == nullptr) {
-		if (this->GetAddrInfo(this->StructToAddress(), this->iPort, AF_UNSPEC,
-							  SOCK_STREAM, 0, &this->psAddrInfo) == false) {
-			if (this->psAddrInfo) {
-				this->FreeAddrInfo(*this->psAddrInfo);
-				this->psAddrInfo = nullptr;
-			}
-		}
+	if (IN6_IS_ADDR_UNSPECIFIED(&this->in6Addr)) {
+		ipType = IP_TYPE::UNSPECIFIED;
+	} else if (IN6_IS_ADDR_LOOPBACK(&this->in6Addr)) {
+		ipType = IP_TYPE::LOOPBACK;
+	} else if (IN6_IS_ADDR_V4MAPPED(&this->in6Addr)) {
+		ipType = IP_TYPE::V4MAPPED;
+	} else if (IN6_IS_ADDR_V4COMPAT(&this->in6Addr)) {
+		ipType = IP_TYPE::V4COMPAT;
+	} else if (IN6_IS_ADDR_MULTICAST(&this->in6Addr)) {
+		ipType = IP_TYPE::MULTICAST;
+	} else if (IN6_IS_ADDR_LINKLOCAL(&this->in6Addr)) {
+		ipType = IP_TYPE::LINKLOCAL;
+	} else if (IN6_IS_ADDR_MC_LINKLOCAL(&this->in6Addr)) {
+		ipType = IP_TYPE::LINKLOCAL;
+	} else if (IN6_IS_ADDR_SITELOCAL(&this->in6Addr)) {
+		ipType = IP_TYPE::SITELOCAL;
+	} else if (IN6_IS_ADDR_MC_NODELOCAL(&this->in6Addr)) {
+		ipType = IP_TYPE::NODELOCAL;
+	} else if (IN6_IS_ADDR_MC_SITELOCAL(&this->in6Addr)) {
+		ipType = IP_TYPE::SITELOCAL;
+	} else if (IN6_IS_ADDR_MC_ORGLOCAL(&this->in6Addr)) {
+		ipType = IP_TYPE::ORGLOCAL;
+	} else if (IN6_IS_ADDR_MC_GLOBAL(&this->in6Addr)) {
+		ipType = IP_TYPE::GLOBAL;
 	}
 
-	return this->psAddrInfo;
+	return ipType;
+}
+
+addrinfo *DualIp::GetAddrInfo() {
+	if (this->addrInfo) {
+		return this->addrInfo;
+	}
+
+	this->addrInfo = this->GetAddrInfo(this->StructToAddress(), this->port,
+									   AF_UNSPEC, SOCK_STREAM, 0);
+
+	return this->addrInfo;
+}
+
+addrinfo *DualIp::GetAddrInfo(const string &address, const in_port_t &port,
+							  const int &family, const int &sockType,
+							  const int &flags) const {
+	addrinfo addrInfoTemp;
+	memset(&addrInfoTemp, 0, sizeof(addrInfoTemp));
+
+	if (address.empty()) {
+		addrInfoTemp.ai_flags = AI_PASSIVE;
+	}
+
+	addrInfoTemp.ai_family = family;
+	addrInfoTemp.ai_socktype = sockType;
+	addrInfoTemp.ai_flags |= flags;
+
+	addrinfo *addrInfo = nullptr;
+
+	const int result = getaddrinfo(address.c_str(), to_string(port).c_str(),
+								   &addrInfoTemp, &addrInfo);
+
+	return result == 0 ? addrInfo : nullptr;
 }

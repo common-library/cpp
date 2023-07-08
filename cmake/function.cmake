@@ -58,7 +58,7 @@ function(func_build_unit_test TEST_BUILD_TARGET SOURCE_TEST SOURCE DEPENDENCIES 
 
 		add_executable(${TEST_BUILD_TARGET} ${SOURCE_TEST} ${SOURCE})
 
-		set_target_properties(${TEST_BUILD_TARGET} PROPERTIES COMPILE_FLAGS ${CMAKE_CXX_FLAGS_COVERAGE})
+		set_source_files_properties(${SOURCE} PROPERTIES COMPILE_FLAGS ${CMAKE_CXX_FLAGS_COVERAGE})
 
 		target_link_libraries(${TEST_BUILD_TARGET} gcov lib::googletest)
 		foreach(ITEM ${DEPENDENCIES})
@@ -82,13 +82,13 @@ function(func_make_coverage)
 	set(LCOV_FILE_BASE ${LCOV_FOLDER}/coverage.base)
 	set(LCOV_FILE_TEST ${LCOV_FOLDER}/coverage.test)
 	set(LCOV_FILE_TOTAL ${LCOV_FOLDER}/coverage.total)
-	set(LCOV_EXCEPT_PATH "*/usr/include/*" "*.h" "*/rabbit.hpp" "*/library/*" "*/test/main.cpp" "*Test.cpp")
+	set(LCOV_EXCEPT_PATH "_deps" "13.1.0")
 
 	add_custom_target(lcov_run
 			COMMAND rm -rf ${LCOV_FOLDER} ${COVERAGE_RESULT_FOLDER}
 			COMMAND mkdir -p ${LCOV_FOLDER} ${COVERAGE_RESULT_FOLDER}
 			COMMAND ${BINARY_LCOV} --capture --initial --directory ${CMAKE_BINARY_DIR} --output-file ${LCOV_FILE_BASE}
-			COMMAND ${BINARY_LCOV} --capture --directory ${CMAKE_BINARY_DIR} --output-file ${LCOV_FILE_TEST}
+			COMMAND ${BINARY_LCOV} --capture --directory ${CMAKE_BINARY_DIR} --output-file ${LCOV_FILE_TEST} --ignore-errors empty,negative
 			COMMAND ${BINARY_LCOV} --add-tracefile ${LCOV_FILE_BASE} --add-tracefile ${LCOV_FILE_TEST} --output-file ${LCOV_FILE_TOTAL}
 			COMMAND ${BINARY_LCOV} --remove ${LCOV_FILE_TOTAL} ${LCOV_EXCEPT_PATH} --output-file ${LCOV_FILE_TOTAL}
 			COMMAND ${BINARY_GENHTML} ${LCOV_FILE_TOTAL} --output-directory ${COVERAGE_RESULT_FOLDER}

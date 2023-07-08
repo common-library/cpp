@@ -2,20 +2,20 @@
 
 #include <netdb.h>
 #include <netinet/in.h>
-
 #include <string>
+
 using namespace std;
 
 class DualIp {
 	private:
-		enum class IPTYPE {
+		enum class IP_TYPE {
 			NOTMATCHED = 0,
 			UNSPECIFIED,
 			LOOPBACK,
-			MULTICAST,
-			LINKLOCAL,
 			V4MAPPED,
 			V4COMPAT,
+			MULTICAST,
+			LINKLOCAL,
 			NODELOCAL,
 			SITELOCAL,
 			ORGLOCAL,
@@ -23,34 +23,36 @@ class DualIp {
 			OTHERIPV6
 		};
 
-		IPTYPE eIpType;
-		in_addr sInAddr;
-		in6_addr sIn6Addr;
-		in_port_t iPort;
-		addrinfo* psAddrInfo;
+		string address;
+		in_port_t port;
 
-		bool Initialize(const string& strAddress);
-		bool Initialize(const sockaddr_storage& sSockAddrStorage);
+		IP_TYPE ipType;
+		in_addr inAddr;
+		in6_addr in6Addr;
+		addrinfo *addrInfo;
+
+		bool Initialize(const string &address);
+		bool Initialize(const sockaddr_storage &sockAddrStorage);
 		bool Finalize();
+		bool Finalize(addrinfo **sAddrInfo);
 
-		bool Valid(const string& strAddress);
+		bool Valid(const string &address) const;
 
-		string StructToAddress();
-		bool AddressToStruct(const string& strAddress);
+		string StructToAddress() const;
+		bool AddressToStruct(const string &address);
 
-		IPTYPE GetIpType();
+		IP_TYPE GetIpType() const;
 
-		bool GetAddrInfo(const string& strAddress, const in_port_t& iPort,
-						 const int& iFamily, const int& iSockType, const int& iFlags,
-						 addrinfo** ppAddrInfo);
-		bool FreeAddrInfo(addrinfo& sAddrInfo);
+		addrinfo *GetAddrInfo(const string &address, const in_port_t &port,
+							  const int &family, const int &sockType,
+							  const int &flags) const;
 
 	public:
-		DualIp(const sockaddr_storage& sSockAddrStorage);
-		DualIp(const string& strAddress, const in_port_t& iPort);
-		virtual ~DualIp();
+		DualIp(const sockaddr_storage &sockAddrStorage);
+		DualIp(const string &address, const in_port_t &port);
+		~DualIp();
 
-		bool Valid();
+		bool Valid() const;
 
-		addrinfo* GetAddrInfo();
+		addrinfo *GetAddrInfo();
 };

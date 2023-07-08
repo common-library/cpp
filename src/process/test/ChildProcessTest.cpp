@@ -1,119 +1,84 @@
-#include "test.h"
-
 #include "../ChildProcess.h"
-
+#include "test.h"
 #include "gtest/gtest.h"
+#include <csignal>
+#include <cstdlib>
+#include <future>
+#include <thread>
 
-#include "../EnvironmentVariable.h"
-#include "Singleton.h"
-#include "ThreadPool.h"
+using namespace std;
 
-class TestChildProcess : public ChildProcess {
+class ChildProcessForChild1 : public ChildProcess {
 	private:
-		virtual bool InitializeDerived() { return true; }
-		virtual bool FinalizeDerived() { return true; }
-		virtual bool Job() { return true; }
+		virtual bool Initialize() override final { return false; }
+		virtual bool Finalize() override final { return false; }
+
+		virtual bool Job() override final { return true; }
 
 	public:
-		TestChildProcess() = default;
-		virtual ~TestChildProcess() = default;
+		ChildProcessForChild1() = default;
+		virtual ~ChildProcessForChild1() = default;
 };
 
-class FalseTestChildProcess : public ChildProcess {
+class ChildProcessForChild2 : public ChildProcess {
 	private:
-		virtual bool InitializeDerived() { return false; }
-		virtual bool FinalizeDerived() { return false; }
-		virtual bool Job() { return false; }
+		virtual bool Initialize() override final { return true; }
+		virtual bool Finalize() override final { return true; }
+
+		virtual bool Job() override final {
+			while (this->GetCondition()) {
+				this_thread::sleep_for(1ms);
+			}
+
+			return true;
+		}
 
 	public:
-		FalseTestChildProcess() = default;
-		virtual ~FalseTestChildProcess() = default;
+		ChildProcessForChild2() = default;
+		virtual ~ChildProcessForChild2() = default;
 };
 
-class FalseChildProcessTest : public ::testing::Test {
-	protected:
-		void SetUp() override {
-			extern int optind;
-			optind = 1;
+TEST(ChildProcessTest, total) {
+	GTEST_FLAG_SET(death_test_style, "threadsafe");
 
-			int iArgc = 1;
-			char* pcArgv[] = {(char*)"./FalseChildProcessTest"};
+	auto run = [](int howToStop) {
+		ChildProcessForChild2 process;
 
-			EXPECT_FALSE(
-				Singleton<EnvironmentVariable>::Instance().Initialize(iArgc, pcArgv));
-		}
+		auto result = async(launch::async, [&process, &howToStop]() {
+			while (process.GetCondition() == false) {
+				this_thread::sleep_for(1ms);
+			}
 
-		void TearDown() override {}
-};
+			switch (howToStop) {
+			case 1:
+				EXPECT_TRUE(process.Stop());
+				break;
+			case 2:
+				EXPECT_EQ(kill(getpid(), SIGTERM), 0);
+				break;
+			}
+		});
 
-class StandaloneChildProcessTest : public ::testing::Test {
-	protected:
-		void SetUp() override {
-			extern int optind;
-			optind = 1;
+		ASSERT_TRUE(process.Start());
 
-			int iArgc = 4;
-			char* pcArgv[] = {(char*)"./StandaloneChildProcessTest", (char*)"-c",
-							  (char*)GstrConfigPath.c_str(), (char*)"-s"};
+		result.wait();
 
-			EXPECT_TRUE(
-				Singleton<EnvironmentVariable>::Instance().Initialize(iArgc, pcArgv));
-		}
+		EXPECT_FALSE(process.GetCondition());
+	};
 
-		void TearDown() override {}
-};
+	ChildProcessForChild1 process;
 
-class NonStandaloneChildProcessTest : public ::testing::Test {
-	protected:
-		void SetUp() override {
-			extern int optind;
-			optind = 1;
+	EXPECT_FALSE(process.Start());
+	EXPECT_FALSE(process.Stop());
 
-			int iArgc = 3;
-			char* pcArgv[] = {(char*)"./NonStandaloneChildProcessTest", (char*)"-c",
-							  (char*)GstrConfigPath.c_str()};
-
-			EXPECT_TRUE(
-				Singleton<EnvironmentVariable>::Instance().Initialize(iArgc, pcArgv));
-		}
-
-		void TearDown() override {}
-};
-
-TEST_F(StandaloneChildProcessTest, SigTerm) {
-	const int iPid = fork();
-	ASSERT_NE(iPid, -1);
-
-	if (iPid == 0) {
-		EXPECT_TRUE(TestChildProcess().Start());
+	const pid_t pid = fork();
+	ASSERT_NE(pid, -1);
+	if (pid == 0) {
+		run(1);
+		run(2);
 
 		exit(testing::Test::HasFailure());
 	}
-	this_thread::sleep_for(chrono::seconds(1));
 
-	EXPECT_EQ(kill(iPid, SIGTERM), 0);
-
-	this_thread::sleep_for(chrono::seconds(1));
-}
-
-TEST_F(NonStandaloneChildProcessTest, Start) {
-	FalseTestChildProcess falseTestChildProcess;
-	EXPECT_FALSE(falseTestChildProcess.Start());
-
-	ThreadPool threadPool(1);
-
-	TestChildProcess testChildProcess;
-
-	future<bool> future =
-		threadPool.AddJob([&]() -> bool { return testChildProcess.Start(); });
-	this_thread::sleep_for(chrono::seconds(1));
-
-	EXPECT_TRUE(testChildProcess.Stop());
-
-	EXPECT_TRUE(future.get());
-}
-
-TEST_F(NonStandaloneChildProcessTest, Stop) {
-	TestChildProcess testChildProcess;
-	EXPECT_TRUE(testChildProcess.Stop());
+	EXPECT_TRUE(wait_process(pid));
 }

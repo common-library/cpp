@@ -1,23 +1,50 @@
 #include "../RapidjsonJson.h"
-
+#include "FileManager.h"
+#include "test.h"
 #include "gtest/gtest.h"
 
-#include "json_info.h"
+TEST(RapidjsonJsonTest, ParsingFromFile) {
+	const auto dirPath = FileManager::Instance().GetTempPath() + "/tmpXXXXXX";
+	EXPECT_TRUE(FileManager::Instance().MakeDir(dirPath));
 
-TEST(RapidjsonJsonTest, strJson1) {
-	RapidjsonJson rapidjsonJson;
+	auto job = [&dirPath](const auto &contents, const auto &check) {
+		const auto path = dirPath + "/" + "json.json";
+		EXPECT_TRUE(FileManager::Instance().Write(path, contents, ios::trunc));
 
-	check_json1_basic(rapidjsonJson);
+		RapidjsonJson json;
 
-	check_json1_array1(rapidjsonJson);
+		EXPECT_TRUE(json.ParsingFromFile(path));
+		check(json, false);
+	};
 
-	check_json1_array2(rapidjsonJson);
+	job(contents1, check_contents1);
+	job(contents2, check_contents2);
+
+	EXPECT_TRUE(FileManager::Instance().RemoveAll(dirPath));
 }
 
-TEST(RapidjsonJsonTest, strJson2) {
-	RapidjsonJson rapidjsonJson;
+TEST(RapidjsonJsonTest, ParsingFromString) {
+	RapidjsonJson json;
 
-	check_json2_basic(rapidjsonJson);
+	EXPECT_FALSE(json.ParsingFromString("invalid"));
 
-	check_json2_array1(rapidjsonJson);
+	EXPECT_TRUE(json.ParsingFromString(contents1));
+	check_contents1(json, false);
+
+	EXPECT_TRUE(json.ParsingFromString(contents2));
+	check_contents2(json, false);
+}
+
+TEST(RapidjsonJsonTest, GetValue) {
+	RapidjsonJson json;
+
+	check_contents1(json, true);
+	check_contents2(json, true);
+}
+
+TEST(RapidjsonJsonTest, GetArray) {
+	RapidjsonJson json;
+
+	check_contents1(json, true);
+	check_contents2(json, true);
 }

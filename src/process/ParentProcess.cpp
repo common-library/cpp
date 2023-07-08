@@ -1,302 +1,301 @@
-#include <sys/wait.h>
-#include <unistd.h>
-
+#include "ParentProcess.h"
+#include "FileManager.h"
+#include "Signal.h"
 #include <csignal>
-#include <cstring>
+#include <cstdlib>
+#include <memory>
+#include <mutex>
+#include <signal.h>
+#include <string>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <thread>
+#include <vector>
+
 using namespace std;
 
-#include "EnvironmentVariable.h"
-#include "FileLog.h"
-#include "FileManager.h"
-#include "Singleton.h"
-
-#include "ParentProcess.h"
-
-ParentProcess::ParentProcess(unique_ptr<ChildProcess> uniqptrChildProcess)
-	: Process(E_PROCESS_TYPE::PARENT), iPidFileFD(-1),
-	  uniqptrChildProcess(move(uniqptrChildProcess)) {
-	DEBUG_G(__PRETTY_FUNCTION__);
+ParentProcess::ParentProcess(const bool &standAlone, const string &binaryName,
+							 vector<unique_ptr<ChildProcess>> &processes)
+	: pidFD(-1), standAlone(standAlone), binaryName(binaryName), stop(false),
+	  pid(getpid()) {
+	for (auto &process : processes) {
+		this->processes.push_back(move(process));
+	}
 }
 
-bool ParentProcess::Initialize() {
-	DEBUG_G(__PRETTY_FUNCTION__);
+ParentProcess::~ParentProcess() { this->Stop(); }
 
-	this->Finalize();
+bool ParentProcess::Initialize() {
+	this->stop.store(false);
 
 	if (this->MakeDaemon() == false) {
-		ERROR_L_G("MakeProcessType error");
 		return false;
 	}
 
-	if (this->InitializePidFile() == false) {
-		ERROR_L_G("WritePid error");
-
-		this->FinalizePidFile();
-
+	if (this->LockPidFile() == false) {
 		return false;
 	}
 
-	Singleton<EnvironmentVariable>::Instance().SetGid(getgid());
-	Singleton<EnvironmentVariable>::Instance().SetUid(getuid());
-
-	this->SetSignal();
-
-	Singleton<EnvironmentVariable>::Instance().SetProcess(this->GetProcessType(), this);
+	if (this->InitializeSignal() == false) {
+		return false;
+	}
 
 	return true;
 }
 
-bool ParentProcess::InitializePidFile() {
-	DEBUG_G(__PRETTY_FUNCTION__);
+bool ParentProcess::InitializeSignal() {
+	Signal::Instance().Add(SIGHUP, SIG_IGN);
+	Signal::Instance().Add(SIGPIPE, SIG_IGN);
+	Signal::Instance().Add(SIGPIPE, SIG_IGN);
+	Signal::Instance().Add(SIGURG, SIG_IGN);
 
-	const string strProcessName =
-		Singleton<EnvironmentVariable>::Instance().GetProcessName();
-	const string strPath = FileManager().GetCurrentPath() + "/" + strProcessName + ".pid";
+	Signal::Instance().Add(SIGCHLD, [this](int signalValue) {
+		this->SignalHandlerChild(signalValue);
+	});
 
-	/*
-		const pid_t parentPid = Singleton<EnvironmentVariable>::Instance().GetParentPid();
-		if(FileManager().Write(strPath, to_string(parentPid), ios::trunc) == false) {
-			ERROR_L_G("Write fail - path : (%s), error : (%s)", strPath.c_str(),
-	   strerror(errno)); return false;
-		}
-	*/
+	Signal::Instance().Add(SIGTERM, [this](int signalValue) {
+		this->SignalHandlerTerm(signalValue);
+	});
 
-	this->iPidFileFD = FileManager().LockBetweenProcess(strPath);
-	if (this->iPidFileFD == -1) {
-		if (errno == EAGAIN) {
-			ERROR_L_G("another process is already running - path : (%s)",
-					  strPath.c_str());
-		} else {
-			ERROR_L_G("LockBetweenProcess fail - path : (%s), error : (%s)",
-					  strPath.c_str(), strerror(errno));
-		}
-
-		return false;
-	}
-
-	if (ftruncate(this->iPidFileFD, 0) == -1) {
-		ERROR_L_G("ftruncate fail - file : (%s), error : (%s)", strPath.c_str(),
-				  strerror(errno));
-
-		return false;
-	}
-
-	const pid_t parentPid = Singleton<EnvironmentVariable>::Instance().GetParentPid();
-	const string strParentPid = to_string(parentPid);
-	if (write(this->iPidFileFD, strParentPid.c_str(), strParentPid.size()) !=
-		(ssize_t)strParentPid.size()) {
-		ERROR_L_G("write fail - file : (%s), error : (%s)", strPath.c_str(),
-				  strerror(errno));
-
-		return false;
+	if (this->standAlone) {
+		Signal::Instance().Add(SIGINT, SIG_IGN);
+	} else {
+		Signal::Instance().Add(SIGINT, [this](int signalValue) {
+			this->SignalHandlerTerm(signalValue);
+		});
 	}
 
 	return true;
 }
 
 bool ParentProcess::Finalize() {
-	DEBUG_G(__PRETTY_FUNCTION__);
+	if (this->IsParentProcess() == false) {
+		lock_guard<mutex> lock(this->mutexForInfos);
 
-	this->FinalizeChildProcess();
+		this->infos.clear();
 
-	this->FinalizePidFile();
+		return true;
+	}
 
-	Singleton<EnvironmentVariable>::Instance().SetProcess(this->GetProcessType(),
-														  nullptr);
+	if (this->StopChildProcess() == false) {
+		return false;
+	}
 
-	Singleton<EnvironmentVariable>::Instance().SetCondition(false);
-
-	return true;
-}
-
-bool ParentProcess::FinalizePidFile() {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	if (this->iPidFileFD != -1) {
-		FileManager().UnLockBetweenProcess(this->iPidFileFD);
-		close(this->iPidFileFD);
-		this->iPidFileFD = -1;
+	if (this->UnLockPidFile() == false) {
+		return false;
 	}
 
 	return true;
 }
 
-bool ParentProcess::FinalizeChildProcess() {
-	DEBUG_G(__PRETTY_FUNCTION__);
+bool ParentProcess::LockPidFile() {
+	const string path = FileManager::Instance().GetCurrentPath() + "/" +
+						this->binaryName + ".pid";
 
-	signal(SIGCHLD, SIG_IGN);
-
-	if (Singleton<EnvironmentVariable>::Instance().GetStandAlone()) {
-		const pid_t childPid = Singleton<EnvironmentVariable>::Instance().GetChildPid();
-		if (childPid != -1) {
-			return kill(childPid, SIGTERM) == 0 ? true : false;
-		}
-	} else {
-		if (this->uniqptrChildProcess.get() != nullptr) {
-			return this->uniqptrChildProcess->Stop();
-		}
+	this->pidFD = FileManager::Instance().LockBetweenProcess(path);
+	if (this->pidFD == -1) {
+		return false;
 	}
+
+	if (ftruncate(this->pidFD, 0) == -1) {
+		return false;
+	}
+
+	const auto pid = to_string(getpid());
+	if (write(this->pidFD, pid.c_str(), pid.size()) != (ssize_t)pid.size()) {
+		return false;
+	}
+
+	return true;
+}
+
+bool ParentProcess::UnLockPidFile() {
+	if (this->pidFD == -1) {
+		return true;
+	}
+
+	FileManager::Instance().UnLockBetweenProcess(this->pidFD);
+	if (close(this->pidFD) == -1) {
+		return false;
+	}
+	this->pidFD = -1;
 
 	return true;
 }
 
 bool ParentProcess::MakeDaemon() {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	if (Singleton<EnvironmentVariable>::Instance().GetStandAlone()) {
-		const int iPid1 = fork();
-		if (iPid1 == -1) {
-			ERROR_L_G("fork fail - error : (%s)", strerror(errno));
-			return false;
-		} else if (iPid1 != 0) {
-			exit(0);
-		}
-
-		setsid();
-		signal(SIGHUP, SIG_IGN);
-
-		const int iPid2 = fork();
-		if (iPid2 == -1) {
-			ERROR_L_G("fork fail - error : (%s)", strerror(errno));
-			return false;
-		} else if (iPid2 != 0) {
-			exit(0);
-		}
+	if (this->standAlone == false) {
+		return true;
 	}
 
-	Singleton<EnvironmentVariable>::Instance().SetParentPid(getpid());
+	const int pid1 = fork();
+	if (pid1 == -1) {
+		return false;
+	} else if (pid1 != 0) {
+		exit(0);
+	}
+
+	setsid();
+
+	const int pid2 = fork();
+	if (pid2 == -1) {
+		return false;
+	} else if (pid2 != 0) {
+		exit(0);
+	}
+
+	close(STDIN_FILENO);
+	close(STDOUT_FILENO);
+	close(STDERR_FILENO);
+
+	this->pid = getpid();
 
 	return true;
 }
 
-bool ParentProcess::Job() {
-	DEBUG_G(__PRETTY_FUNCTION__);
+void ParentProcess::SignalHandlerTerm(int signalValue) { this->Stop(); }
 
-	if (Singleton<EnvironmentVariable>::Instance().GetStandAlone()) {
-		this->iPidFileFD = -1;
+void ParentProcess::SignalHandlerChild(int signalValue) {
+	lock_guard<mutex> lock(this->mutexForHandler);
+
+	int status = 0;
+	int oldPid = -1;
+	while ((oldPid = wait3(&status, WNOHANG, (struct rusage *)0)) > 0) {
+		if (WIFEXITED(status)) {
+			{
+				lock_guard<mutex> lock(this->mutexForInfos);
+
+				this->infos.erase(oldPid);
+
+				if (this->infos.empty()) {
+					this->Stop();
+					return;
+				}
+			}
+
+			continue;
+		}
+
+		if (this->stop) {
+			continue;
+		}
+
+		const int newPid = fork();
+		if (newPid == -1) {
+			exit(-1);
+		} else if (newPid == 0) {
+			Signal::Instance().Add(SIGINT, SIG_IGN);
+
+			unique_ptr<ChildProcess> process = nullptr;
+
+			{
+				lock_guard<mutex> lock(this->mutexForInfos);
+
+				if (this->infos.find(oldPid) != this->infos.end()) {
+					process = move(this->infos.at(oldPid));
+				}
+			}
+
+			if (process) {
+				process->Start();
+			}
+
+			this->Stop();
+		} else {
+			lock_guard<mutex> lock(this->mutexForInfos);
+
+			this->infos[newPid] = move(this->infos.at(oldPid));
+			this->infos.erase(oldPid);
+		}
 	}
-
-	if (this->uniqptrChildProcess.get() == nullptr) {
-		INFO_G("child process is nullptr");
-		return true;
-	}
-
-	return this->uniqptrChildProcess->Start();
 }
 
+bool ParentProcess::IsParentProcess() const { return this->pid == getpid(); }
+
 bool ParentProcess::Start() {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	INFO_G("parent process start");
-
 	if (this->Initialize() == false) {
-		ERROR_L_G("Initialize fail");
 		return false;
 	}
 
-	if (Singleton<EnvironmentVariable>::Instance().GetStandAlone()) {
-		const int iPid = fork();
-
-		if (iPid == -1) {
-			ERROR_L_G("fork fail - error : (%s)", strerror(errno));
-			return false;
-		} else if (iPid == 0) {
-			return this->Job();
-		} else {
-			Singleton<EnvironmentVariable>::Instance().SetChildPid(iPid);
-			Singleton<EnvironmentVariable>::Instance().SetCondition(true);
-
-			while (Singleton<EnvironmentVariable>::Instance().GetCondition()) {
-				pause();
-			}
-
-			return true;
-		}
-	} else {
-		return this->Job();
+	if (this->StartChildProcess() == false) {
+		return false;
 	}
 
-	return false;
-}
-
-bool ParentProcess::Stop() {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	INFO_G("parent process stop");
+	this->condition.store(true);
+	while (this->stop == false) {
+		this_thread::sleep_for(1ms);
+	}
+	this->condition.store(false);
 
 	return this->Finalize();
 }
 
-void ParentProcess::SetSignal() {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	if (Singleton<EnvironmentVariable>::Instance().GetStandAlone()) {
-		signal(SIGHUP, SIG_IGN);
-		signal(SIGPIPE, SIG_IGN);
-		signal(SIGURG, SIG_IGN);
-		signal(SIGINT, SIG_IGN);
-
-		signal(SIGCHLD, this->SigChild);
-	} else {
-		signal(SIGCHLD, SIG_IGN);
+bool ParentProcess::StartChildProcess() {
+	if (this->StopChildProcess() == false) {
+		return false;
 	}
 
-	signal(SIGTERM, this->SigTerm);
-}
-
-void ParentProcess::SigChild(int iSig) {
-	DEBUG_G(__PRETTY_FUNCTION__);
-
-	INFO_G("parent caught signal %s", strsignal(iSig));
-
-	Singleton<EnvironmentVariable>::Instance().SetChildPid(-1);
-
-	int iWstat = 0;
-	int iOldPid = -1;
-	while ((iOldPid = wait3(&iWstat, WNOHANG, (struct rusage*)0)) > 0) {
-		if (WIFEXITED(iWstat) == 1) {
-			INFO_G("child process normal stop, so parent process stop");
-			Singleton<EnvironmentVariable>::Instance().SetCondition(false);
-			break;
-		}
-
-		const int iNewPid = fork();
-		if (iNewPid == -1) {
-			ERROR_L_G("fork fail - error : (%s)", strerror(errno));
+	for (auto &process : this->processes) {
+		const int pid = fork();
+		if (pid == -1) {
 			exit(-1);
-		} else if (iNewPid == 0) {
-			ParentProcess* pParentProcess =
-				(ParentProcess*)Singleton<EnvironmentVariable>::Instance().GetProcess(
-					E_PROCESS_TYPE::PARENT);
-			if (pParentProcess) {
-				if (pParentProcess->Job() == false) {
-					ERROR_L_G("parent process run error so exit");
-					exit(-1);
-				}
-			} else {
-				ERROR_L_G("parent process is nullptr");
-				exit(-1);
-			}
+		} else if (pid == 0) {
+			Signal::Instance().Add(SIGINT, SIG_IGN);
+
+			return move(process)->Start() && this->Stop();
 		} else {
-			Singleton<EnvironmentVariable>::Instance().SetChildPid(iNewPid);
+			lock_guard<mutex> lock(this->mutexForInfos);
+			this->infos[pid] = move(process);
 		}
 	}
+	processes.clear();
+
+	return true;
 }
 
-void ParentProcess::SigTerm(int iSig) {
-	DEBUG_G(__PRETTY_FUNCTION__);
+bool ParentProcess::Stop() {
+	this->stop.store(true);
 
-	INFO_G("parent caught signal %s", strsignal(iSig));
+	return true;
+}
 
-	ParentProcess* pParentProcess =
-		(ParentProcess*)Singleton<EnvironmentVariable>::Instance().GetProcess(
-			E_PROCESS_TYPE::PARENT);
-	if (pParentProcess == nullptr) {
-		return;
+bool ParentProcess::StopChildProcess() {
+	while (true) {
+		{
+			lock_guard<mutex> lock(this->mutexForHandler);
+		}
+
+		vector<int> pids = {};
+
+		{
+			lock_guard<mutex> lock(this->mutexForInfos);
+
+			if (this->infos.empty()) {
+				return true;
+			}
+
+			for (const auto &info : this->infos) {
+				struct stat sts;
+				const string command = "/proc/" + to_string(info.first);
+				if (stat(command.c_str(), &sts) == -1 && errno == ENOENT) {
+					this->infos.erase(info.first);
+					break;
+				}
+
+				pids.push_back(info.first);
+			}
+		}
+
+		for (const auto &pid : pids) {
+			if (this->IsParentProcess() == false) {
+				return true;
+			}
+
+			kill(pid, SIGTERM);
+		}
+
+		this_thread::sleep_for(100ms);
 	}
 
-	if (pParentProcess->Stop() == false) {
-		ERROR_L_G("ParentProcess Stop fail");
-		return;
-	}
+	return true;
 }

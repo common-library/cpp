@@ -16,9 +16,7 @@ set(SOURCE_TEST
 	)
 
 set(DEPENDENCIES
-		lib::design-pattern
 		lib::file
-		lib::thread
 	)
 
 set(CONFIGURE_FILE_TEST

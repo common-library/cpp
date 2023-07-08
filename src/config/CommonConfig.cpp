@@ -1,36 +1,39 @@
 #include "CommonConfig.h"
+#include <string>
+
+using namespace std;
 
 CommonConfig::CommonConfig()
-	: Config("common.config"), strWorkingPath(""), eLogLevel(E_LOG_LEVEL::DEBUG),
-	  bThreadMode(false), strLogOutputPath(""), strLogFileNamePrefix("") {}
+	: Config("common.config"), logLevel(LOG_LEVEL::DEBUG), workingPath(""),
+	  logOutputPath(""), logFileName(""), logLinePrint(false),
+	  logThreadMode(false) {}
 
 bool CommonConfig::InitializeDerived() {
-	this->strWorkingPath = this->jsonManager.GetValue<string>({"working_path"});
-
-	this->eLogLevel = E_LOG_LEVEL::DEBUG;
-	const string strLogLevel = this->jsonManager.GetValue<string>({"log_level"});
-	for (const auto& iter : GmapLogLevelInfo) {
-		if (strLogLevel == iter.second) {
-			this->eLogLevel = iter.first;
+	this->logLevel = LOG_LEVEL::DEBUG;
+	for (const auto &iter : LOG_LEVEL_INFO) {
+		if (this->json->GetValue<string>({"log_level"}) == iter.second) {
+			this->logLevel = iter.first;
+			break;
 		}
 	}
 
-	this->bThreadMode = this->jsonManager.GetValue<bool>({"thread_mode"});
-
-	this->strLogOutputPath = this->jsonManager.GetValue<string>({"log_output_path"});
-
-	this->strLogFileNamePrefix =
-		this->jsonManager.GetValue<string>({"log_file_name_prefix"});
+	this->logOutputPath = this->json->GetValue<string>({"log_output_path"});
+	this->workingPath = this->json->GetValue<string>({"working_path"});
+	this->logFileName = this->json->GetValue<string>({"log_file_name"});
+	this->logLinePrint = this->json->GetValue<bool>({"log_line_print"});
+	this->logThreadMode = this->json->GetValue<bool>({"log_thread_mode"});
 
 	return true;
 }
 
-string CommonConfig::GetWorkingPath() { return this->strWorkingPath; }
+LOG_LEVEL CommonConfig::GetLogLevel() const { return this->logLevel; }
 
-E_LOG_LEVEL CommonConfig::GetLogLevel() { return this->eLogLevel; }
+string CommonConfig::GetWorkingPath() const { return this->workingPath; }
 
-bool CommonConfig::GetThreadMode() { return this->bThreadMode; }
+string CommonConfig::GetLogOutputPath() const { return this->logOutputPath; }
 
-string CommonConfig::GetLogOutputPath() { return this->strLogOutputPath; }
+string CommonConfig::GetLogFileName() const { return this->logFileName; }
 
-string CommonConfig::GetLogFileNamePrefix() { return this->strLogFileNamePrefix; }
+bool CommonConfig::GetLogLinePrint() const { return this->logLinePrint; }
+
+bool CommonConfig::GetLogThreadMode() const { return this->logThreadMode; }

@@ -4,29 +4,29 @@ set(TEST_BUILD_TARGET ${BUILD_TARGET}${POSTFIX_TEST_NAME})
 
 set(HEADER
 		Json.h
-		JsonManager.h
+		JsonFactory.h
 	)
 
 set(SOURCE
-		JsonManager.cpp
-
-		BoostJson.cpp
+		Json.cpp
 		RabbitJson.cpp
 		RapidjsonJson.cpp
+
+		JsonFactory.cpp
 	)
 
 set(SOURCE_TEST
 		test/main.cpp
 
-		test/JsonManagerTest.cpp
-
-		test/BoostJsonTest.cpp
 		test/RabbitJsonTest.cpp
 		test/RapidjsonJsonTest.cpp
+
+		test/JsonFactoryTest.cpp
 	)
 
 set(DEPENDENCIES
 		lib::file
+		lib::util
 		lib::rabbit
 		lib::rapidjson
 	)

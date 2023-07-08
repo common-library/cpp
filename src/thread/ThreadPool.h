@@ -1,55 +1,76 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
 #include <functional>
 #include <future>
+#include <memory>
+#include <mutex>
 #include <queue>
-#include <thread>
+#include <utility>
 #include <vector>
+
 using namespace std;
+
+using poolSizeType = size_t;
 
 class ThreadPool {
 	private:
-		mutex mutexJob;
+		bool stop;
 
-		atomic<bool> bStop;
+		atomic<poolSizeType> poolSize;
 
-		condition_variable cvJob;
+		mutable mutex mutexAdmin;
+		bool wakeUpAdmin;
+		future<void> futureAdmin;
+		condition_variable cvAdmin;
 
-		vector<thread> vecPool;
-		queue<function<void()>> queueJob;
+		mutable mutex mutexUser;
+		vector<future<void>> futureUser;
+		atomic<poolSizeType> runningUser;
+		atomic<poolSizeType> runningJob;
+		queue<function<void()>> queueUserJob;
+		condition_variable cvUser;
 
-		void Worker();
-
-		function<void()> GetJob();
-		void SetJob(function<void()> job);
+		void AdminWorker();
+		void UserWorker();
 
 	public:
-		ThreadPool(const size_t& poolSize);
-		virtual ~ThreadPool();
+		ThreadPool(const poolSizeType &poolSize);
+		~ThreadPool();
 
 		template <class Func, class... Args>
-		future<typename result_of<Func(Args...)>::type> AddJob(Func&& func,
-															   Args&&... args);
+		future<typename result_of<Func(Args...)>::type> AddJob(Func &&func,
+															   Args &&...args);
 
-		size_t GetPoolSize();
+		size_t GetWaitingJobSize() const;
+		poolSizeType GetRunningJobSize() const;
+
+		poolSizeType GetPoolSize() const;
+		poolSizeType GetCurrentPoolSize() const;
+		void SetPoolSize(const poolSizeType &poolSize,
+						 const bool &async = true);
 };
 
 template <class Func, class... Args>
-future<typename result_of<Func(Args...)>::type> ThreadPool::AddJob(Func&& func,
-																   Args&&... args) {
-	if (this->bStop) {
-		throw logic_error("thread pool is stop");
-	}
-
+future<typename result_of<Func(Args...)>::type>
+ThreadPool::AddJob(Func &&func, Args &&...args) {
 	using returnType = typename result_of<Func(Args...)>::type;
 
 	auto job = make_shared<packaged_task<returnType()>>(
 		bind(forward<Func>(func), forward<Args>(args)...));
 
-	this->SetJob([job]() { (*job)(); });
+	if (this->stop) {
+		(*job)();
+	} else {
+		{
+			lock_guard<mutex> lock(this->mutexUser);
 
-	this->cvJob.notify_one();
+			this->queueUserJob.push([job]() { (*job)(); });
+		}
+
+		this->cvUser.notify_one();
+	}
 
 	return job->get_future();
 }

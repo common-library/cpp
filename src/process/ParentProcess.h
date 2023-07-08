@@ -1,36 +1,52 @@
 #pragma once
 
-#include <memory>
-using namespace std;
-
 #include "ChildProcess.h"
+#include "Process.h"
+#include <atomic>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <vector>
+
+using namespace std;
 
 class ParentProcess : public Process {
 	private:
-		int iPidFileFD;
+		int pidFD;
+		bool standAlone;
+		string binaryName;
+		atomic_bool stop;
+		atomic<pid_t> pid;
 
-		unique_ptr<ChildProcess> uniqptrChildProcess;
+		mutex mutexForInfos;
+		mutex mutexForHandler;
 
-		bool Initialize();
-		bool InitializePidFile();
+		vector<unique_ptr<ChildProcess>> processes;
+		map<pid_t, unique_ptr<ChildProcess>> infos;
 
-		bool Finalize();
-		bool FinalizePidFile();
-		bool FinalizeChildProcess();
+		bool Initialize() override final;
+		bool InitializeSignal();
+		bool Finalize() override final;
+
+		bool StartChildProcess();
+		bool StopChildProcess();
 
 		bool MakeDaemon();
 
-		bool Job();
+		bool LockPidFile();
+		bool UnLockPidFile();
 
-		void SetSignal();
-
-		static void SigChild(int iSig);
-		static void SigTerm(int iSig);
+		void SignalHandlerChild(int signalValue);
+		void SignalHandlerTerm(int signalValue);
 
 	public:
-		ParentProcess(unique_ptr<ChildProcess> uniqptrChildProcess);
-		virtual ~ParentProcess() = default;
+		ParentProcess(const bool &standAlone, const string &binaryName,
+					  vector<unique_ptr<ChildProcess>> &processes);
+		~ParentProcess();
 
-		virtual bool Start();
-		virtual bool Stop();
+		bool IsParentProcess() const;
+
+		bool Start() override final;
+		bool Stop() override final;
 };

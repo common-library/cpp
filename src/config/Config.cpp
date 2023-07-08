@@ -1,17 +1,20 @@
-#include <cstring>
+#include "Config.h"
+#include "JsonFactory.h"
+#include <string>
+
 using namespace std;
 
-#include "Config.h"
+Config::Config(const string &fileName)
+	: fileName(fileName),
+	  json(JsonFactory::Instance().Make(JSON_TYPE::RAPIDJSON)) {}
 
-Config::Config(const string& strFileName, const E_JSON_PARSER& eJsonParser)
-	: strFileName(strFileName), jsonManager(eJsonParser) {}
-
-bool Config::Initialize(const string& strConfigPath) {
-
-	const string strPath = strConfigPath + "/" + this->strFileName;
-	if (this->jsonManager.ParsingFile(strPath) == false) {
+bool Config::Initialize(const string &path) {
+	const string &fullPath = path + "/" + this->fileName;
+	if (this->json->ParsingFromFile(fullPath) == false) {
 		return false;
 	}
 
 	return this->InitializeDerived();
 }
+
+string Config::GetFileName() const { return this->fileName; }

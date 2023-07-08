@@ -1,143 +1,167 @@
-#include "test.h"
-
 #include "../FileLog.h"
-
-#include "gtest/gtest.h"
-
 #include "FileManager.h"
+#include "test.h"
+#include "gtest/gtest.h"
+#include <cstring>
+#include <functional>
+#include <future>
+#include <map>
+#include <mutex>
+#include <ranges>
+#include <string>
+#include <vector>
 
-static bool check(const E_LOG_LEVEL& eLogLevel, const bool& bThread) {
-	const string strTemplate = FileManager().GetTempPath() + "/tmpXXXXXX";
-	const string strOutputPath = mkdtemp((char*)(strTemplate.c_str()));
+using namespace std;
 
-	const string strLocal = "local";
-	const string strGlobal = "global";
-
+static void check(const LOG_LEVEL &logLevel) {
 	FileLog fileLog;
 
-	EXPECT_TRUE(fileLog.Initialize(eLogLevel, strOutputPath, strLocal, bThread));
-	EXPECT_TRUE(Singleton<FileLog>::Instance().Initialize(eLogLevel, strOutputPath,
-														  strGlobal, bThread));
+	const vector<function<bool()>> loggings{
+		[&fileLog]() { return fileLog.Debug("aaa"); },
+		[&fileLog]() { return fileLog.Info("bbb"); },
+		[&fileLog]() { return fileLog.Warning("ccc"); },
+		[&fileLog]() { return fileLog.Error("ddd"); },
+		[&fileLog]() { return fileLog.Critical("eee"); }};
 
-	EXPECT_TRUE(DEBUG(fileLog, "(%d) (%s)", 1, "a"));
-	EXPECT_TRUE(DEBUG_L(fileLog, "(%d) (%s)", 11, "aa"));
-	EXPECT_TRUE(DEBUG_G("(%d) (%s)", 1, "a"));
-	EXPECT_TRUE(DEBUG_L_G("(%d) (%s)", 11, "aa"));
+	const map<bool, map<LOG_LEVEL, string>> answer = {
+		{true,
+		 {
+			 {LOG_LEVEL::DEBUG,
+			  ", DEBUG, " + PROJECT_SOURCE_DIR +
+				  "/src/log/test/FileLogTest.cpp:20, check(const "
+				  "LOG_LEVEL&)::<lambda()>] : aaa\r"},
+			 {LOG_LEVEL::INFO,
+			  ", INFO, " + PROJECT_SOURCE_DIR +
+				  "/src/log/test/FileLogTest.cpp:21, check(const "
+				  "LOG_LEVEL&)::<lambda()>] : bbb\r"},
+			 {LOG_LEVEL::WARNING,
+			  ", WARNING, " + PROJECT_SOURCE_DIR +
+				  "/src/log/test/FileLogTest.cpp:22, check(const "
+				  "LOG_LEVEL&)::<lambda()>] : ccc\r"},
+			 {LOG_LEVEL::ERROR,
+			  ", ERROR, " + PROJECT_SOURCE_DIR +
+				  "/src/log/test/FileLogTest.cpp:23, check(const "
+				  "LOG_LEVEL&)::<lambda()>] : ddd\r"},
+			 {LOG_LEVEL::CRITICAL,
+			  ", CRITICAL, " + PROJECT_SOURCE_DIR +
+				  "/src/log/test/FileLogTest.cpp:24, "
+				  "check(const LOG_LEVEL&)::<lambda()>] : eee\r"},
+		 }},
+		{false,
+		 {
+			 {LOG_LEVEL::DEBUG, ", DEBUG] : aaa\r"},
+			 {LOG_LEVEL::INFO, ", INFO] : bbb\r"},
+			 {LOG_LEVEL::WARNING, ", WARNING] : ccc\r"},
+			 {LOG_LEVEL::ERROR, ", ERROR] : ddd\r"},
+			 {LOG_LEVEL::CRITICAL, ", CRITICAL] : eee\r"},
+		 }}};
 
-	EXPECT_TRUE(INFO(fileLog, "(%d) (%s)", 2, "b"));
-	EXPECT_TRUE(INFO_L(fileLog, "(%d) (%s)", 22, "bb"));
-	EXPECT_TRUE(INFO_G("(%d) (%s)", 2, "b"));
-	EXPECT_TRUE(INFO_L_G("(%d) (%s)", 22, "bb"));
+	const int count = 1000;
+	const vector<string> outputPaths{
+		FileManager::Instance().GetTempPath() + "/tmpXXXXXX_1",
+		FileManager::Instance().GetTempPath() + "/tmpXXXXXX_2"};
+	const vector<string> fileNames{"test1", "test2"};
 
-	EXPECT_TRUE(WARNING(fileLog, "(%d) (%s)", 3, "c"));
-	EXPECT_TRUE(WARNING_L(fileLog, "(%d) (%s)", 33, "cc"));
-	EXPECT_TRUE(WARNING_G("(%d) (%s)", 3, "c"));
-	EXPECT_TRUE(WARNING_L_G("(%d) (%s)", 33, "cc"));
+	for (const auto &iter : outputPaths) {
+		EXPECT_TRUE(FileManager::Instance().MakeDir(iter));
+	}
 
-	EXPECT_TRUE(ERROR(fileLog, "(%d) (%s)", 4, "d"));
-	EXPECT_TRUE(ERROR_L(fileLog, "(%d) (%s)", 44, "dd"));
-	EXPECT_TRUE(ERROR_G("(%d) (%s)", 4, "d"));
-	EXPECT_TRUE(ERROR_L_G("(%d) (%s)", 44, "dd"));
+	EXPECT_TRUE(fileLog.Initialize(logLevel, outputPaths.at(0), fileNames.at(0),
+								   false, true));
 
-	EXPECT_TRUE(CRITICAL(fileLog, "(%d) (%s)", 5, "e"));
-	EXPECT_TRUE(CRITICAL_L(fileLog, "(%d) (%s)", 55, "ee"));
-	EXPECT_TRUE(CRITICAL_G("(%d) (%s)", 5, "e"));
-	EXPECT_TRUE(CRITICAL_L_G("(%d) (%s)", 55, "ee"));
+	mutex m;
+	const auto job = [&m, &fileLog, &count, &outputPaths,
+					  &fileNames](const auto &func) {
+		for (int i = 0; i < count; ++i) {
+			lock_guard<mutex> lock(m);
+
+			fileLog.SetOutputPath(outputPaths.at(i % 2));
+			fileLog.SetFileName(fileNames.at(i % 2));
+
+			fileLog.SetLinePrint(true);
+			fileLog.SetThreadMode(true);
+			EXPECT_TRUE(func());
+
+			fileLog.SetLinePrint(false);
+			fileLog.SetThreadMode(false);
+			EXPECT_TRUE(func());
+		}
+	};
+
+	vector<future<void>> jobs = {};
+	for (const auto &iter : loggings) {
+		jobs.push_back(async(launch::async, bind(job, iter)));
+	}
+
+	for (auto &iter : jobs) {
+		if (iter.valid()) {
+			iter.get();
+		}
+	}
+	jobs.clear();
 
 	EXPECT_TRUE(fileLog.Flush());
-	EXPECT_TRUE(Singleton<FileLog>::Instance().Flush());
 
-	string strLocalResult = "";
-	string strGlobalResult = "";
-	for (const auto& iter : FileManager().GetPathList(strOutputPath)) {
-		if (iter.find(strLocal) != string::npos) {
-			EXPECT_TRUE(FileManager().Read(iter, strLocalResult));
-		} else if (iter.find(strGlobal) != string::npos) {
-			EXPECT_TRUE(FileManager().Read(iter, strGlobalResult));
+	for (const auto &iter : outputPaths) {
+		map<string, int> result;
+		result.clear();
+		for (const auto &iter2 :
+			 FileManager::Instance().GetSubDirectories(iter)) {
+			const auto readResult = FileManager::Instance().Read(iter2);
+			EXPECT_TRUE(get<0>(readResult));
+			for (const auto &iter3 :
+				 ranges::views::split(get<1>(readResult), '\n')) {
+				const auto temp = string(iter3.begin(), iter3.end());
+				if (temp.empty()) {
+					continue;
+				}
+
+				++result[temp.substr(strlen("[13:43:36"))];
+			}
 		}
-	}
 
-	map<string, multimap<E_LOG_LEVEL, string>> mapResult = {
-		{strLocal,
-		 {{E_LOG_LEVEL::DEBUG, ", DEBUG] :  (1) (a)\r\n"},
-		  {E_LOG_LEVEL::DEBUG, ", DEBUG] :  (11) (aa) (" + GstrSourceDir +
-								   "/src/log/test/FileLogTest.cpp:23)\r\n"},
+		for (const auto &iter2 : answer) {
+			for (const auto &iter3 : iter2.second) {
+				if (static_cast<underlying_type_t<LOG_LEVEL>>(iter3.first) <
+					static_cast<underlying_type_t<LOG_LEVEL>>(logLevel)) {
+					continue;
+				}
 
-		  {E_LOG_LEVEL::INFO, ", INFO] :  (2) (b)\r\n"},
-		  {E_LOG_LEVEL::INFO, ", INFO] :  (22) (bb) (" + GstrSourceDir +
-								  "/src/log/test/FileLogTest.cpp:28)\r\n"},
-
-		  {E_LOG_LEVEL::WARNING, ", WARNING] :  (3) (c)\r\n"},
-		  {E_LOG_LEVEL::WARNING, ", WARNING] :  (33) (cc) (" + GstrSourceDir +
-									 "/src/log/test/FileLogTest.cpp:33)\r\n"},
-
-		  {E_LOG_LEVEL::ERROR, ", ERROR] :  (4) (d)\r\n"},
-		  {E_LOG_LEVEL::ERROR, ", ERROR] :  (44) (dd) (" + GstrSourceDir +
-								   "/src/log/test/FileLogTest.cpp:38)\r\n"},
-
-		  {E_LOG_LEVEL::CRITICAL, ", CRITICAL] :  (5) (e)\r\n"},
-		  {E_LOG_LEVEL::CRITICAL, ", CRITICAL] :  (55) (ee) (" + GstrSourceDir +
-									  "/src/log/test/FileLogTest.cpp:43)\r\n"}}},
-		{strGlobal,
-		 {{E_LOG_LEVEL::DEBUG, ", DEBUG] :  (1) (a)\r\n"},
-		  {E_LOG_LEVEL::DEBUG, ", DEBUG] :  (11) (aa) (" + GstrSourceDir +
-								   "/src/log/test/FileLogTest.cpp:25)\r\n"},
-
-		  {E_LOG_LEVEL::INFO, ", INFO] :  (2) (b)\r\n"},
-		  {E_LOG_LEVEL::INFO, ", INFO] :  (22) (bb) (" + GstrSourceDir +
-								  "/src/log/test/FileLogTest.cpp:30)\r\n"},
-
-		  {E_LOG_LEVEL::WARNING, ", WARNING] :  (3) (c)\r\n"},
-		  {E_LOG_LEVEL::WARNING, ", WARNING] :  (33) (cc) (" + GstrSourceDir +
-									 "/src/log/test/FileLogTest.cpp:35)\r\n"},
-
-		  {E_LOG_LEVEL::ERROR, ", ERROR] :  (4) (d)\r\n"},
-		  {E_LOG_LEVEL::ERROR, ", ERROR] :  (44) (dd) (" + GstrSourceDir +
-								   "/src/log/test/FileLogTest.cpp:40)\r\n"},
-
-		  {E_LOG_LEVEL::CRITICAL, ", CRITICAL] :  (5) (e)\r\n"},
-		  {E_LOG_LEVEL::CRITICAL, ", CRITICAL] :  (55) (ee) (" + GstrSourceDir +
-									  "/src/log/test/FileLogTest.cpp:45)\r\n"}}}};
-
-	for (const auto& iter : mapResult) {
-		for (const auto& iter2 : iter.second) {
-			if (static_cast<underlying_type_t<E_LOG_LEVEL>>(iter2.first) <
-				static_cast<underlying_type_t<E_LOG_LEVEL>>(eLogLevel)) {
-				continue;
-			}
-
-			string strResult = "";
-			if (iter.first == strLocal) {
-				strResult = strLocalResult;
-			} else {
-				strResult = strGlobalResult;
-			}
-
-			if (strResult.find(iter2.second) == string::npos) {
-				EXPECT_STREQ(iter2.second.c_str(), strResult.c_str());
+				if (result.find(iter3.second) == result.end()) {
+					EXPECT_STREQ("invalid log", iter3.second.c_str());
+				}
+				EXPECT_EQ(result[iter3.second], count / 2);
 			}
 		}
 	}
 
-	EXPECT_TRUE(FileManager().RemoveAll(strOutputPath));
-
-	return true;
+	for (const auto &iter : outputPaths) {
+		EXPECT_TRUE(FileManager::Instance().RemoveAll(iter));
+	}
 }
 
 TEST(FileLogTest, Initialize) {
 	FileLog fileLog;
 
-	EXPECT_TRUE(fileLog.Initialize(E_LOG_LEVEL::INFO, "", "", true));
-	EXPECT_TRUE(fileLog.Initialize(E_LOG_LEVEL::INFO, "", "", false));
+	EXPECT_TRUE(
+		fileLog.Initialize(LOG_LEVEL::DEBUG, "/tmp", "test", true, true));
 
-	const string strTemplate = FileManager().GetTempPath() + "/tmpXXXXXX";
-	const string strOutputPath = mkdtemp((char*)(strTemplate.c_str()));
-
-	EXPECT_TRUE(fileLog.Initialize(E_LOG_LEVEL::INFO, strOutputPath, "", true));
-	EXPECT_TRUE(fileLog.Initialize(E_LOG_LEVEL::INFO, strOutputPath, "", false));
-
-	EXPECT_TRUE(FileManager().RemoveAll(strOutputPath));
+	EXPECT_EQ(LOG_LEVEL::DEBUG, fileLog.GetLogLevel());
+	EXPECT_STREQ("/tmp", fileLog.GetOutputPath().c_str());
+	EXPECT_STREQ("test", fileLog.GetFileName().c_str());
+	EXPECT_TRUE(fileLog.GetLinePrint());
+	EXPECT_TRUE(fileLog.GetThreadMode());
 }
+
+TEST(FileLogTest, Debug) { check(LOG_LEVEL::DEBUG); }
+
+TEST(FileLogTest, Info) { check(LOG_LEVEL::INFO); }
+
+TEST(FileLogTest, Warning) { check(LOG_LEVEL::WARNING); }
+
+TEST(FileLogTest, Error) { check(LOG_LEVEL::ERROR); }
+
+TEST(FileLogTest, Critical) { check(LOG_LEVEL::CRITICAL); }
 
 TEST(FileLogTest, Flush) {
 	FileLog fileLog;
@@ -145,41 +169,82 @@ TEST(FileLogTest, Flush) {
 	EXPECT_TRUE(fileLog.Flush());
 }
 
-TEST(FileLogTest, SetThread) {
-	Singleton<FileLog>::Instance().SetThread(true);
-	EXPECT_TRUE(check(E_LOG_LEVEL::DEBUG, true));
+TEST(FileLogTest, GetLogLevel) {
+	FileLog fileLog;
 
-	Singleton<FileLog>::Instance().SetThread(true);
-	EXPECT_TRUE(check(E_LOG_LEVEL::DEBUG, false));
+	fileLog.SetLogLevel(LOG_LEVEL::DEBUG);
 
-	Singleton<FileLog>::Instance().SetThread(false);
-	EXPECT_TRUE(check(E_LOG_LEVEL::DEBUG, true));
-
-	Singleton<FileLog>::Instance().SetThread(false);
-	EXPECT_TRUE(check(E_LOG_LEVEL::DEBUG, false));
+	EXPECT_EQ(LOG_LEVEL::DEBUG, fileLog.GetLogLevel());
 }
 
-TEST(FileLogTest, DEBUG) {
-	EXPECT_TRUE(check(E_LOG_LEVEL::DEBUG, true));
-	EXPECT_TRUE(check(E_LOG_LEVEL::DEBUG, false));
+TEST(FileLogTest, SetLogLevel) {
+	FileLog fileLog;
+
+	fileLog.SetLogLevel(LOG_LEVEL::DEBUG);
+
+	EXPECT_EQ(LOG_LEVEL::DEBUG, fileLog.GetLogLevel());
 }
 
-TEST(FileLogTest, INFO) {
-	EXPECT_TRUE(check(E_LOG_LEVEL::INFO, true));
-	EXPECT_TRUE(check(E_LOG_LEVEL::INFO, false));
+TEST(FileLogTest, GetOutputPath) {
+	FileLog fileLog;
+
+	fileLog.SetOutputPath("/tmp");
+
+	EXPECT_STREQ("/tmp", fileLog.GetOutputPath().c_str());
 }
 
-TEST(FileLogTest, WARNING) {
-	EXPECT_TRUE(check(E_LOG_LEVEL::WARNING, true));
-	EXPECT_TRUE(check(E_LOG_LEVEL::WARNING, false));
+TEST(FileLogTest, SetOutputPath) {
+	FileLog fileLog;
+
+	fileLog.SetOutputPath("/tmp");
+
+	EXPECT_STREQ("/tmp", fileLog.GetOutputPath().c_str());
 }
 
-TEST(FileLogTest, ERROR) {
-	EXPECT_TRUE(check(E_LOG_LEVEL::ERROR, true));
-	EXPECT_TRUE(check(E_LOG_LEVEL::ERROR, false));
+TEST(FileLogTest, GetFileName) {
+	FileLog fileLog;
+
+	fileLog.SetFileName("test");
+
+	EXPECT_STREQ("test", fileLog.GetFileName().c_str());
 }
 
-TEST(FileLogTest, CRITICAL) {
-	EXPECT_TRUE(check(E_LOG_LEVEL::CRITICAL, true));
-	EXPECT_TRUE(check(E_LOG_LEVEL::CRITICAL, false));
+TEST(FileLogTest, SetFileName) {
+	FileLog fileLog;
+
+	fileLog.SetFileName("test");
+
+	EXPECT_STREQ("test", fileLog.GetFileName().c_str());
+}
+
+TEST(FileLogTest, GetLinePrint) {
+	FileLog fileLog;
+
+	fileLog.SetLinePrint(true);
+
+	EXPECT_TRUE(fileLog.GetLinePrint());
+}
+
+TEST(FileLogTest, SetLinePrint) {
+	FileLog fileLog;
+
+	fileLog.SetLinePrint(true);
+
+	EXPECT_TRUE(fileLog.GetLinePrint());
+}
+
+TEST(FileLogTest, GetThreadMode) {
+	FileLog fileLog;
+
+	fileLog.SetThreadMode(true);
+
+	EXPECT_TRUE(fileLog.GetThreadMode());
+}
+
+TEST(FileLogTest, SetThreadMode) {
+	FileLog fileLog;
+
+	fileLog.SetThreadMode(true);
+
+	EXPECT_TRUE(fileLog.GetThreadMode());
 }
