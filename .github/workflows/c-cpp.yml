@@ -1,0 +1,48 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: upgrade gcc 13
+      run: |
+        sudo apt update
+        sudo apt install build-essential
+        sudo apt install g++-13 gcc-13
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+        sudo update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-13 100
+
+    - name: check version
+      run: |
+        gcc -v
+        g++ -v
+        cmake --version
+
+    - name : mkdir build
+      run: mkdir build
+
+    - name : cmake
+      run: cd build && cmake ../ -DENABLE_TEST=on
+
+    - name: make install
+      run: cd build && make -j4 install
+
+    - name: make test
+      run: cd build && make test
+
+    - name: make lcov_run
+      run: |
+        sudo perl -MCPAN -e 'install Capture::Tiny'
+        sudo perl -MCPAN -e 'install DateTime'
+        cd build && make lcov_run

@@ -17,6 +17,7 @@
 
 ### Operating Systems
  - CentOS Stream release 9
+ - Ubuntu 22.04.3 LTS
 
 ### Compiler
  - gcc version 13.1.0
@@ -37,12 +38,17 @@
    - `mkdir build && cd build`
    - `cmake ../ -DENABLE_TEST=on && make -j4 install && make test`
  - code coverage
-   - `dnf install perl-FindBin`
-   - `dnf install perl-Time-HiRes`
-   - `dnf install perl-CPAN`
-   - `perl -MCPAN -e 'install Capture::Tiny'`
-   - `perl -MCPAN -e 'install DateTime'`
-   - `perl -MCPAN -e 'install Date::Parse'`
+   - prepare
+     - CentOS Stream release 9
+       - `dnf install perl-FindBin`
+       - `dnf install perl-Time-HiRes`
+       - `dnf install perl-CPAN`
+       - `perl -MCPAN -e 'install Capture::Tiny'`
+       - `perl -MCPAN -e 'install DateTime'`
+       - `perl -MCPAN -e 'install Date::Parse'`
+     - Ubuntu 22.04.3 LTS
+       - `sudo perl -MCPAN -e 'install Capture::Tiny'`
+       - `sudo perl -MCPAN -e 'install DateTime'`
    - `mkdir build && cd build`
    - `cmake ../ -DENABLE_TEST=on && make -j4 install && make test && make lcov_run`
    - run `./coverage/html/index.html` in your browser

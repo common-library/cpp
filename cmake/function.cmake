@@ -82,7 +82,7 @@ function(func_make_coverage)
 	set(LCOV_FILE_BASE ${LCOV_FOLDER}/coverage.base)
 	set(LCOV_FILE_TEST ${LCOV_FOLDER}/coverage.test)
 	set(LCOV_FILE_TOTAL ${LCOV_FOLDER}/coverage.total)
-	set(LCOV_EXCEPT_PATH "_deps" "13.1.0")
+	set(LCOV_EXCEPT_PATH "_deps" "13")
 
 	add_custom_target(lcov_run
 			COMMAND rm -rf ${LCOV_FOLDER} ${COVERAGE_RESULT_FOLDER}
