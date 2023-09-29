@@ -41,8 +41,10 @@ jobs:
     - name: make test
       run: cd build && make test
 
-    - name: make lcov_run
+    - name: install perl module
       run: |
         sudo perl -MCPAN -e 'install Capture::Tiny'
         sudo perl -MCPAN -e 'install DateTime'
-        cd build && make lcov_run
+
+    - name: make lcov_run
+      run: cd build && make lcov_run
