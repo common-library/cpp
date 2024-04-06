@@ -13,17 +13,20 @@
  - util
 
 ## Supported Platforms
- - requires a compiler that conforms to the C++20 standard or higher.
+ - requires a compiler that conforms to the C++20 standard or higher
 
 ### Operating Systems
- - CentOS Stream release 9
- - Ubuntu 22.04.3 LTS
+ - CentOS
+   - Stream release 9
+ - Ubuntu
+   - 20.04 LTS
+   - 22.04 LTS
 
 ### Compiler
  - gcc version 13.1.0
 
 ### Build System
- - cmake version 3.20.2
+ - cmake version 3.12.0 or higher
 
 ## Build
  - basic
@@ -39,14 +42,15 @@
    - `cmake ../ -DENABLE_TEST=on && make -j4 install && make test`
  - code coverage
    - prepare
-     - CentOS Stream release 9
+     - CentOS
        - `dnf install perl-FindBin`
        - `dnf install perl-Time-HiRes`
        - `dnf install perl-CPAN`
        - `perl -MCPAN -e 'install Capture::Tiny'`
        - `perl -MCPAN -e 'install DateTime'`
        - `perl -MCPAN -e 'install Date::Parse'`
-     - Ubuntu 22.04.3 LTS
+       - `perl -MCPAN -e 'install JSON::XS'`
+     - Ubuntu
        - `sudo perl -MCPAN -e 'install Capture::Tiny'`
        - `sudo perl -MCPAN -e 'install DateTime'`
    - `mkdir build && cd build`

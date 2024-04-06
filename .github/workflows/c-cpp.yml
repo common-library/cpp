@@ -6,15 +6,27 @@ on:
   pull_request:
     branches: [ "**" ]
 
-jobs:
-  build:
+env:
+  CMAKE_MINIMUM_TAG: v3.12.0
+  CMAKE_MINIMUM_FILE_NAME: cmake-3.12.0-Linux-x86_64
+  CMAKE_MAXIMUM_TAG: v3.29.1
+  CMAKE_MAXIMUM_FILE_NAME: cmake-3.29.1-linux-x86_64
+  BUILD_DIRECTORY_BASIC: build-basic
+  BUILD_DIRECTORY_TEST: build-test
 
-    runs-on: ubuntu-latest
+jobs:
+  cmake-minimum-version:
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ ubuntu-20.04, ubuntu-22.04 ]
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: upgrade gcc 13
+    - name: preparation / gcc
       run: |
         sudo apt update
         sudo apt install build-essential
@@ -23,28 +35,104 @@ jobs:
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
         sudo update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-13 100
 
-    - name: check version
+    - name: preparation / cmake
       run: |
-        gcc -v
-        g++ -v
+        wget https://github.com/Kitware/CMake/releases/download/${{ env.CMAKE_MINIMUM_TAG }}/${{ env.CMAKE_MINIMUM_FILE_NAME }}.tar.gz --directory-prefix=$HOME/cmake --quiet
+        tar xzf $HOME/cmake/${{ env.CMAKE_MINIMUM_FILE_NAME }}.tar.gz --directory=$HOME/cmake
+
+    - name: preparation / directory
+      run: |
+        mkdir ${{ env.BUILD_DIRECTORY_BASIC }}
+        mkdir ${{ env.BUILD_DIRECTORY_TEST }}
+
+    - name: make install / basic
+      run: |
+        export PATH=$HOME/cmake/${{ env.CMAKE_MINIMUM_FILE_NAME }}/bin:$PATH
         cmake --version
+        cd ${{ env.BUILD_DIRECTORY_BASIC }}
+        cmake ../
+        make -j4 install
 
-    - name : mkdir build
-      run: mkdir build
-
-    - name : cmake
-      run: cd build && cmake ../ -DENABLE_TEST=on
-
-    - name: make install
-      run: cd build && make -j4 install
+    - name: make install / test
+      run: |
+        export PATH=$HOME/cmake/${{ env.CMAKE_MINIMUM_FILE_NAME }}/bin:$PATH
+        cmake --version
+        cd ${{ env.BUILD_DIRECTORY_TEST }}
+        cmake ../ -DENABLE_TEST=on
+        make -j4 install
 
     - name: make test
-      run: cd build && make test
+      run: |
+        cd ${{ env.BUILD_DIRECTORY_TEST }}
+        make test
 
-    - name: install perl module
+    - name: code coverage preparation
       run: |
         sudo perl -MCPAN -e 'install Capture::Tiny'
         sudo perl -MCPAN -e 'install DateTime'
 
-    - name: make lcov_run
-      run: cd build && make lcov_run
+    - name: code coverage
+      run: |
+        cd ${{ env.BUILD_DIRECTORY_TEST }}
+        make lcov_run
+
+  cmake-maximum-version:
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ ubuntu-20.04, ubuntu-22.04 ]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: preparation / gcc
+      run: |
+        sudo apt update
+        sudo apt install build-essential
+        sudo apt install g++-13 gcc-13
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+        sudo update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-13 100
+
+    - name: preparation / cmake
+      run: |
+        wget https://github.com/Kitware/CMake/releases/download/${{ env.CMAKE_MAXIMUM_TAG }}/${{ env.CMAKE_MAXIMUM_FILE_NAME }}.tar.gz --directory-prefix=$HOME/cmake --quiet
+        tar xzf $HOME/cmake/${{ env.CMAKE_MAXIMUM_FILE_NAME }}.tar.gz --directory=$HOME/cmake
+
+    - name: preparation / directory
+      run: |
+        mkdir ${{ env.BUILD_DIRECTORY_BASIC }}
+        mkdir ${{ env.BUILD_DIRECTORY_TEST }}
+
+    - name: make install / basic
+      run: |
+        export PATH=$HOME/cmake/${{ env.CMAKE_MAXIMUM_FILE_NAME }}/bin:$PATH
+        cmake --version
+        cd ${{ env.BUILD_DIRECTORY_BASIC }}
+        cmake ../
+        make -j4 install
+
+    - name: make install / test
+      run: |
+        export PATH=$HOME/cmake/${{ env.CMAKE_MAXIMUM_FILE_NAME }}/bin:$PATH
+        cmake --version
+        cd ${{ env.BUILD_DIRECTORY_TEST }}
+        cmake ../ -DENABLE_TEST=on
+        make -j4 install
+
+    - name: make test
+      run: |
+        cd ${{ env.BUILD_DIRECTORY_TEST }}
+        make test
+
+    - name: code coverage preparation
+      run: |
+        sudo perl -MCPAN -e 'install Capture::Tiny'
+        sudo perl -MCPAN -e 'install DateTime'
+
+    - name: code coverage
+      run: |
+        cd ${{ env.BUILD_DIRECTORY_TEST }}
+        make lcov_run
