@@ -1,6 +1,6 @@
 Name: @BUILD_TARGET@
 Description: @BUILD_TARGET@ library
 Version: @PROJECT_VERSION@
-URL: https://github.com/heaven-chp/common-library-cpp
+URL: https://github.com/common-library/cpp
 Cflags: @PKG_CONFIG_CFLAGS@
 Libs: @PKG_CONFIG_LIBS@

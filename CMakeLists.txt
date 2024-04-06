@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.20.2)
+cmake_minimum_required(VERSION 3.12.0)
 
-project(common-library-cpp VERSION 1.0.1 LANGUAGES CXX)
+project(common-library VERSION 1.0.2 LANGUAGES CXX)
 
 include(./cmake/define.cmake)
 include(./cmake/function.cmake)
