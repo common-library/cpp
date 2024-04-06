@@ -9,10 +9,6 @@ FetchContent_Declare(
 	GIT_TAG v1.13.0
 )
 
-FetchContent_GetProperties(${TARGET_NAME})
-if(NOT ${TARGET_NAME}_POPULATED)
-	FetchContent_Populate(${TARGET_NAME})
-	add_subdirectory(${${TARGET_NAME}_SOURCE_DIR} ${${TARGET_NAME}_BINARY_DIR})
+FetchContent_MakeAvailable(${TARGET_NAME})
 
-	add_library(${ALIAS_NAME} ALIAS gtest)
-endif()
+add_library(${ALIAS_NAME} ALIAS gtest)
