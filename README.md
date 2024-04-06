@@ -1,4 +1,4 @@
-# common-library-cpp
+# Common Library for C++
 
 ## Features
  - config
