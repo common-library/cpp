@@ -2,6 +2,7 @@
 #include "CommonConfig.h"
 #include "FileManager.h"
 #include <cstring>
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -58,14 +59,21 @@ bool EnvironmentVariable::InitializeOptions(const vector<string> &args) {
 	int opt = 0;
 	while ((opt = getopt(argsToChar.size(), argsToChar.data(), "c:s")) != -1) {
 		switch (opt) {
-		case 'c':
+		case 'c': {
 			if (optarg == nullptr || strlen(optarg) == 0) {
 				return false;
 			}
 
-			this->configPath = FileManager::Instance().ToAbsolutePath(optarg);
+			if (const auto [absolutePath, errorCode] =
+					FileManager::Instance().ToAbsolutePath(optarg);
+				errorCode) {
+				return false;
+			} else {
+				this->configPath = absolutePath;
+			}
 
 			break;
+		}
 		case 's':
 			this->standAlone = true;
 
@@ -85,16 +93,19 @@ bool EnvironmentVariable::InitializeCurrentPath() const {
 	}
 
 	const string workingPath = commonConfig.GetWorkingPath();
-
 	if (workingPath.empty()) {
 		return true;
 	}
 
-	if (FileManager::Instance().MakeDirs(workingPath) == false) {
-		return false;
+	if (get<0>(FileManager::Instance().IsExist(workingPath)) == false) {
+		cout << workingPath << endl;
+		auto [ok, errorCode] = FileManager::Instance().CreateDirectories(workingPath);
+		if (ok == false || errorCode) {
+			return false;
+		}
 	}
 
-	if (FileManager::Instance().SetCurrentPath(workingPath) == false) {
+	if (FileManager::Instance().SetCurrentPath(workingPath)) {
 		return false;
 	}
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "FileManager.h"
 #include <atomic>
 #include <condition_variable>
 #include <future>
@@ -41,7 +40,7 @@ class FileLog {
 		mutex mutexForCv;
 
 		mutex mutexForJobs;
-		vector<future<bool>> jobs;
+		vector<future<error_code>> jobs;
 
 		future<void> futureForFlush;
 

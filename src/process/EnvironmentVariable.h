@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -8,7 +9,7 @@ using namespace std;
 class EnvironmentVariable {
 	private:
 		bool standAlone = false;
-		string configPath = "";
+		filesystem::path configPath = "";
 		string binaryName = "";
 
 		bool InitializeOptions(const vector<string> &args);

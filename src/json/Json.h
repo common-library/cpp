@@ -1,8 +1,8 @@
 #pragma once
 
-#include "FileManager.h"
 #include <any>
 #include <concepts>
+#include <filesystem>
 #include <map>
 #include <string>
 #include <vector>
@@ -24,7 +24,7 @@ class Json {
 		Json() = default;
 		virtual ~Json() = default;
 
-		virtual bool ParsingFromFile(const string &path) const final;
+		virtual bool ParsingFromFile(const filesystem::path &path) const final;
 		virtual bool ParsingFromString(const string &contents) const = 0;
 
 		virtual bool WhetherTheKeyExists(const vector<string> &key) const final;

@@ -51,12 +51,16 @@ static void check(const LOG_LEVEL &logLevel) {
 		 }}};
 
 	const int count = 1000;
-	const vector<string> outputPaths{FileManager::Instance().GetTempPath() + "/tmpXXXXXX_1",
-									 FileManager::Instance().GetTempPath() + "/tmpXXXXXX_2"};
+	const auto [tempDir, errorCode] = FileManager::Instance().GetTempPath();
+	EXPECT_FALSE(errorCode);
+	const vector<string> outputPaths{tempDir.string() + "/tmpXXXXXX_1",
+									 tempDir.string() + "/tmpXXXXXX_2"};
 	const vector<string> fileNames{"test1", "test2"};
 
 	for (const auto &iter : outputPaths) {
-		EXPECT_TRUE(FileManager::Instance().MakeDir(iter));
+		auto [ok, errorCode] = FileManager::Instance().CreateDirectory(iter);
+		EXPECT_TRUE(ok);
+		EXPECT_FALSE(errorCode);
 	}
 
 	EXPECT_TRUE(fileLog.Initialize(logLevel, outputPaths.at(0), fileNames.at(0), false, true));
@@ -97,9 +101,9 @@ static void check(const LOG_LEVEL &logLevel) {
 		map<string, int> result;
 		result.clear();
 		for (const auto &iter2 : FileManager::Instance().GetSubDirectories(iter)) {
-			const auto readResult = FileManager::Instance().Read(iter2);
-			EXPECT_TRUE(get<0>(readResult));
-			for (const auto &iter3 : ranges::views::split(get<1>(readResult), '\n')) {
+			const auto [data, errorCode] = FileManager::Instance().Read(iter2);
+			EXPECT_FALSE(errorCode);
+			for (const auto &iter3 : ranges::views::split(data, '\n')) {
 				const auto temp = string(iter3.begin(), iter3.end());
 				if (temp.empty()) {
 					continue;
@@ -125,7 +129,9 @@ static void check(const LOG_LEVEL &logLevel) {
 	}
 
 	for (const auto &iter : outputPaths) {
-		EXPECT_TRUE(FileManager::Instance().RemoveAll(iter));
+		auto [ok, errorCode] = FileManager::Instance().RemoveAll(iter);
+		EXPECT_FALSE(errorCode);
+		EXPECT_TRUE(ok);
 	}
 }
 

@@ -1,16 +1,18 @@
 #include "Json.h"
+#include "FileManager.h"
+#include <filesystem>
 #include <string>
 #include <vector>
 
 using namespace std;
 
-bool Json::ParsingFromFile(const string &path) const {
-	const auto result = FileManager::Instance().Read(path);
-	if (get<0>(result) == false) {
+bool Json::ParsingFromFile(const filesystem::path &path) const {
+	const auto [data, errorCode] = FileManager::Instance().Read(path);
+	if (errorCode) {
 		return false;
 	}
 
-	return this->ParsingFromString(get<1>(result));
+	return this->ParsingFromString(data);
 }
 
 bool Json::WhetherTheKeyExists(const vector<string> &key) const {

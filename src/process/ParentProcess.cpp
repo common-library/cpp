@@ -85,11 +85,16 @@ bool ParentProcess::Finalize() {
 }
 
 bool ParentProcess::LockPidFile() {
-	const string path = FileManager::Instance().GetCurrentPath() + "/" + this->binaryName + ".pid";
-
-	this->pidFD = FileManager::Instance().LockBetweenProcess(path);
-	if (this->pidFD == -1) {
+	const auto [currentPath, errorCode] = FileManager::Instance().GetCurrentPath();
+	if (errorCode) {
 		return false;
+	}
+	const auto path = currentPath.string() + "/" + this->binaryName + ".pid";
+
+	if (auto [fd, errorCode] = FileManager::Instance().LockBetweenProcess(path); errorCode) {
+		return false;
+	} else {
+		this->pidFD = fd;
 	}
 
 	if (ftruncate(this->pidFD, 0) == -1) {
@@ -109,10 +114,14 @@ bool ParentProcess::UnLockPidFile() {
 		return true;
 	}
 
-	FileManager::Instance().UnLockBetweenProcess(this->pidFD);
+	if (FileManager::Instance().UnLockBetweenProcess(this->pidFD)) {
+		return false;
+	}
+
 	if (close(this->pidFD) == -1) {
 		return false;
 	}
+
 	this->pidFD = -1;
 
 	return true;

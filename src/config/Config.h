@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Json.h"
+#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -19,7 +20,7 @@ class Config {
 		Config(const string &fileName);
 		virtual ~Config() = default;
 
-		virtual bool Initialize(const string &path) final;
+		virtual bool Initialize(const filesystem::path &path) final;
 
 		virtual string GetFileName() const final;
 };

@@ -2,14 +2,25 @@
 #include "FileManager.h"
 #include "test.h"
 #include "gtest/gtest.h"
+#include <string>
+
+using namespace std;
 
 TEST(RapidjsonJsonTest, ParsingFromFile) {
-	const auto dirPath = FileManager::Instance().GetTempPath() + "/tmpXXXXXX";
-	EXPECT_TRUE(FileManager::Instance().MakeDir(dirPath));
+	const auto [tempDir, errorCode] = FileManager::Instance().GetTempPath();
+	EXPECT_FALSE(errorCode);
+
+	const auto dirPath = tempDir.string() + "/tmpXXXXXX";
+	if (const auto [ok, errorCode] = FileManager::Instance().CreateDirectory(dirPath); errorCode) {
+		EXPECT_EQ(errorCode.value(), -1);
+		EXPECT_STREQ(errorCode.message().c_str(), "");
+	} else if (ok == false) {
+		EXPECT_STREQ("invalid", "");
+	}
 
 	auto job = [&dirPath](const auto &contents, const auto &check) {
 		const auto path = dirPath + "/" + "json.json";
-		EXPECT_TRUE(FileManager::Instance().Write(path, contents, ios::trunc));
+		EXPECT_FALSE(FileManager::Instance().Write(path, contents, ios::trunc));
 
 		RapidjsonJson json;
 
@@ -20,7 +31,12 @@ TEST(RapidjsonJsonTest, ParsingFromFile) {
 	job(contents1, check_contents1);
 	job(contents2, check_contents2);
 
-	EXPECT_TRUE(FileManager::Instance().RemoveAll(dirPath));
+	if (const auto [ok, errorCode] = FileManager::Instance().RemoveAll(dirPath); errorCode) {
+		EXPECT_EQ(errorCode.value(), -1);
+		EXPECT_STREQ(errorCode.message().c_str(), "");
+	} else if (ok == false) {
+		EXPECT_STREQ("invalid", "");
+	}
 }
 
 TEST(RapidjsonJsonTest, ParsingFromString) {

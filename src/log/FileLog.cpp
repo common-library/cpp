@@ -1,6 +1,6 @@
 #include "FileLog.h"
+#include "FileManager.h"
 #include <cstdio>
-#include <cstring>
 #include <ctime>
 #include <format>
 #include <future>
@@ -144,8 +144,9 @@ bool FileLog::Flush() {
 
 	for (auto &iter : this->jobs) {
 		if (iter.valid()) {
-			if (iter.get() == false) {
-				printf("log error - errno : (%d), strerror : (%s)\n", errno, strerror(errno));
+			if (error_code errorCode = iter.get(); errorCode) {
+				printf("log error - value : (%d), message : (%s)\n", errorCode.value(),
+					   errorCode.message().c_str());
 			}
 		}
 	}

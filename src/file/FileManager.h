@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 using namespace std;
@@ -13,40 +14,49 @@ class FileManager {
 		virtual ~FileManager() = default;
 
 	public:
-		bool IsExist(const string &path) const;
-		bool IsRegularFile(const string &path) const;
-		bool IsDirectory(const string &path) const;
+		pair<bool, error_code> IsExist(const filesystem::path &path) const;
 
-		int LockBetweenProcess(const string &path, const mode_t &mode = 0755) const;
-		bool LockBetweenProcess(const int &fd) const;
-		bool UnLockBetweenProcess(const int &fd) const;
+		pair<bool, error_code> IsRegularFile(const filesystem::path &path) const;
 
-		tuple<bool, string> Read(const string &path) const;
-		bool Write(const string &path, const string &data,
-				   const ios_base::openmode &openMode) const;
+		pair<bool, error_code> IsDirectory(const filesystem::path &path) const;
 
-		bool MakeDir(const string &path) const;
-		bool MakeDirs(const string &path) const;
+		pair<int, error_code> LockBetweenProcess(const filesystem::path &path,
+												 const mode_t &mode = 0755) const;
+		error_code LockBetweenProcess(const int &fd) const;
+		error_code UnLockBetweenProcess(const int &fd) const;
 
-		bool Copy(const string &fromPath, const string &toPath,
-				  filesystem::copy_options options = filesystem::copy_options::none) const;
-		bool CopyAll(const string &fromPath, const string &toPath) const;
+		pair<string, error_code> Read(const filesystem::path &path) const;
+		error_code Write(const filesystem::path &path, const string &data,
+						 const ios_base::openmode &openMode) const;
 
-		bool Remove(const string &path) const;
-		bool RemoveAll(const string &path) const;
+		pair<bool, error_code> CreateDirectory(const filesystem::path &path) const;
+		pair<bool, error_code> CreateDirectories(const filesystem::path &path) const;
 
-		string ToAbsolutePath(const string &path) const;
-		string ToCanonicalPath(const string &path) const;
-		string ToRelativePathToRootPath(const string &path) const;
+		error_code Copy(const filesystem::path &fromPath, const filesystem::path &toPath,
+						filesystem::copy_options options = filesystem::copy_options::none) const;
+		error_code CopyAll(const filesystem::path &fromPath, const filesystem::path &toPath) const;
 
-		string GetTempPath() const;
-		string GetRootPath(const string &path) const;
-		string GetRelativePath(const string &path) const;
-		vector<string> GetSubDirectories(const string &path) const;
-		vector<string> GetRecursiveSubDirectories(const string &path) const;
+		pair<bool, error_code> Remove(const filesystem::path &path) const;
+		pair<bool, error_code> RemoveAll(const filesystem::path &path) const;
 
-		string GetCurrentPath() const;
-		bool SetCurrentPath(const string &path) const;
+		pair<filesystem::path, error_code> ToAbsolutePath(const filesystem::path &path) const;
+
+		pair<filesystem::path, error_code> ToCanonicalPath(const filesystem::path &path) const;
+
+		filesystem::path ToRelativePath(const filesystem::path &path) const;
+
+		pair<filesystem::path, error_code> GetTempPath() const;
+
+		filesystem::path GetRootPath(const filesystem::path &path) const;
+
+		pair<filesystem::path, error_code> GetRelativePath(const filesystem::path &path) const;
+
+		vector<filesystem::path> GetSubDirectories(const filesystem::path &path) const;
+
+		vector<filesystem::path> GetRecursiveSubDirectories(const filesystem::path &path) const;
+
+		pair<filesystem::path, error_code> GetCurrentPath() const;
+		error_code SetCurrentPath(const filesystem::path &path) const;
 
 		static FileManager &Instance();
 };
