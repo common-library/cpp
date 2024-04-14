@@ -5,8 +5,7 @@
 using namespace std;
 
 Config::Config(const string &fileName)
-	: fileName(fileName),
-	  json(JsonFactory::Instance().Make(JSON_TYPE::RAPIDJSON)) {}
+	: fileName(fileName), json(JsonFactory::Instance().Make(JSON_TYPE::RAPIDJSON)) {}
 
 bool Config::Initialize(const string &path) {
 	const string &fullPath = path + "/" + this->fileName;

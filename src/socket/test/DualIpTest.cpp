@@ -6,6 +6,4 @@ TEST(DualIpTest, Valid) {
 	EXPECT_FALSE(DualIp("999.0.0.1", 10000).Valid());
 }
 
-TEST(DualIpTest, GetAddrInfo) {
-	EXPECT_NE(DualIp("127.0.0.1", 10000).GetAddrInfo(), nullptr);
-}
+TEST(DualIpTest, GetAddrInfo) { EXPECT_NE(DualIp("127.0.0.1", 10000).GetAddrInfo(), nullptr); }

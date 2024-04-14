@@ -7,33 +7,17 @@ using namespace std;
 
 TEST(utilTest, trim) {
 	const map<string, string> result = {
-		{"abc", "abc"},
-		{"abc\t", "abc"},
-		{"abc\r", "abc"},
-		{"abc\n", "abc"},
-		{"abc\t\r", "abc"},
-		{"abc\t\r\n", "abc"},
-		{"abc ", "abc"},
-		{"abc  ", "abc"},
-		{"abc   ", "abc"},
+		{"abc", "abc"},			{"abc\t", "abc"},			{"abc\r", "abc"},
+		{"abc\n", "abc"},		{"abc\t\r", "abc"},			{"abc\t\r\n", "abc"},
+		{"abc ", "abc"},		{"abc  ", "abc"},			{"abc   ", "abc"},
 
-		{"\tabc", "abc"},
-		{"\rabc", "abc"},
-		{"\nabc", "abc"},
-		{"\t\rabc", "abc"},
-		{"\t\r\nabc", "abc"},
-		{" abc", "abc"},
-		{"  abc", "abc"},
-		{"   abc", "abc"},
+		{"\tabc", "abc"},		{"\rabc", "abc"},			{"\nabc", "abc"},
+		{"\t\rabc", "abc"},		{"\t\r\nabc", "abc"},		{" abc", "abc"},
+		{"  abc", "abc"},		{"   abc", "abc"},
 
-		{"\tabc\t", "abc"},
-		{"\rabc\r", "abc"},
-		{"\nabc\n", "abc"},
-		{"\t\rabc\t\r", "abc"},
-		{"\t\r\nabc\t\r\n", "abc"},
-		{" abc ", "abc"},
-		{"  abc  ", "abc"},
-		{"   abc   ", "abc"},
+		{"\tabc\t", "abc"},		{"\rabc\r", "abc"},			{"\nabc\n", "abc"},
+		{"\t\rabc\t\r", "abc"}, {"\t\r\nabc\t\r\n", "abc"}, {" abc ", "abc"},
+		{"  abc  ", "abc"},		{"   abc   ", "abc"},
 	};
 
 	for (const auto &iter : result) {
@@ -47,33 +31,17 @@ TEST(utilTest, trim) {
 
 TEST(utilTest, trim_copy) {
 	const map<string, string> result = {
-		{"abc", "abc"},
-		{"abc\t", "abc"},
-		{"abc\r", "abc"},
-		{"abc\n", "abc"},
-		{"abc\t\r", "abc"},
-		{"abc\t\r\n", "abc"},
-		{"abc ", "abc"},
-		{"abc  ", "abc"},
-		{"abc   ", "abc"},
+		{"abc", "abc"},			{"abc\t", "abc"},			{"abc\r", "abc"},
+		{"abc\n", "abc"},		{"abc\t\r", "abc"},			{"abc\t\r\n", "abc"},
+		{"abc ", "abc"},		{"abc  ", "abc"},			{"abc   ", "abc"},
 
-		{"\tabc", "abc"},
-		{"\rabc", "abc"},
-		{"\nabc", "abc"},
-		{"\t\rabc", "abc"},
-		{"\t\r\nabc", "abc"},
-		{" abc", "abc"},
-		{"  abc", "abc"},
-		{"   abc", "abc"},
+		{"\tabc", "abc"},		{"\rabc", "abc"},			{"\nabc", "abc"},
+		{"\t\rabc", "abc"},		{"\t\r\nabc", "abc"},		{" abc", "abc"},
+		{"  abc", "abc"},		{"   abc", "abc"},
 
-		{"\tabc\t", "abc"},
-		{"\rabc\r", "abc"},
-		{"\nabc\n", "abc"},
-		{"\t\rabc\t\r", "abc"},
-		{"\t\r\nabc\t\r\n", "abc"},
-		{" abc ", "abc"},
-		{"  abc  ", "abc"},
-		{"   abc   ", "abc"},
+		{"\tabc\t", "abc"},		{"\rabc\r", "abc"},			{"\nabc\n", "abc"},
+		{"\t\rabc\t\r", "abc"}, {"\t\r\nabc\t\r\n", "abc"}, {" abc ", "abc"},
+		{"  abc  ", "abc"},		{"   abc   ", "abc"},
 	};
 
 	for (const auto &iter : result) {

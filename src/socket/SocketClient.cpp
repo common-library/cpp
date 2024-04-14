@@ -13,15 +13,14 @@
 using namespace std;
 
 SocketClient::SocketClient(const int &fd, const int &timeout)
-	: fd(fd), address(""), port(0), timeout(timeout > 0 ? timeout * 1000 : -1),
-	  peerAddress(""), peerPort(0) {
+	: fd(fd), address(""), port(0), timeout(timeout > 0 ? timeout * 1000 : -1), peerAddress(""),
+	  peerPort(0) {
 	this->Initialize(this->fd);
 }
 
-SocketClient::SocketClient(const string &address, const in_port_t &port,
-						   const int &timeout)
-	: fd(-1), address(address), port(port),
-	  timeout(timeout > 0 ? timeout * 1000 : -1), peerAddress(""), peerPort(0) {
+SocketClient::SocketClient(const string &address, const in_port_t &port, const int &timeout)
+	: fd(-1), address(address), port(port), timeout(timeout > 0 ? timeout * 1000 : -1),
+	  peerAddress(""), peerPort(0) {
 	this->Initialize(this->address, this->port);
 }
 
@@ -69,15 +68,14 @@ bool SocketClient::Poll(const short int &flags) const {
 		break;
 	}
 
-	if (!(pollFD.revents & flags) || pollFD.revents & POLLERR ||
-		pollFD.revents & POLLNVAL || pollFD.revents & POLLHUP) {
+	if (!(pollFD.revents & flags) || pollFD.revents & POLLERR || pollFD.revents & POLLNVAL ||
+		pollFD.revents & POLLHUP) {
 		return false;
 	}
 
 	int error = 0;
 	socklen_t sockLen = sizeof(error);
-	if (getsockopt(this->fd, SOL_SOCKET, SO_ERROR, (void *)&error,
-				   (socklen_t *)&sockLen) == -1) {
+	if (getsockopt(this->fd, SOL_SOCKET, SO_ERROR, (void *)&error, (socklen_t *)&sockLen) == -1) {
 		return false;
 	}
 
@@ -92,8 +90,7 @@ bool SocketClient::Poll(const short int &flags) const {
 bool SocketClient::Connect(addrinfo *addrInfo) {
 	this->DisConnect();
 
-	this->fd = socket(addrInfo->ai_family, addrInfo->ai_socktype,
-					  addrInfo->ai_protocol);
+	this->fd = socket(addrInfo->ai_family, addrInfo->ai_socktype, addrInfo->ai_protocol);
 	if (this->fd == -1) {
 		return false;
 	}
@@ -110,9 +107,8 @@ bool SocketClient::Connect(addrinfo *addrInfo) {
 		return false;
 	}
 
-	const short int flags = POLLIN | POLLRDNORM | POLLRDBAND | POLLPRI |
-							POLLOUT | POLLWRNORM | POLLWRBAND | POLLERR |
-							POLLHUP | POLLNVAL;
+	const short int flags = POLLIN | POLLRDNORM | POLLRDBAND | POLLPRI | POLLOUT | POLLWRNORM |
+							POLLWRBAND | POLLERR | POLLHUP | POLLNVAL;
 	if (this->Poll(flags) == false) {
 		return false;
 	}
@@ -185,8 +181,7 @@ tuple<bool, string> SocketClient::Read(const int &readSize, bool &end) const {
 		return make_tuple(false, "");
 	}
 
-	if (data.get()[resultLen - 2] == '\r' &&
-		data.get()[resultLen - 1] == '\n') {
+	if (data.get()[resultLen - 2] == '\r' && data.get()[resultLen - 1] == '\n') {
 		end = true;
 	}
 
@@ -204,8 +199,7 @@ bool SocketClient::Write(const string &data) const {
 
 	decltype(data.size()) resultLen = 0;
 	while (resultLen < data.size()) {
-		ssize_t size =
-			write(this->fd, data.c_str() + resultLen, data.size() - resultLen);
+		ssize_t size = write(this->fd, data.c_str() + resultLen, data.size() - resultLen);
 		if (size == 0) {
 			return true;
 		} else if (size == -1) {

@@ -57,8 +57,7 @@ void Signal::Handler(int signalValue) {
 	{
 		lock_guard<mutex> lock(Signal::Instance().mutexForInfos);
 
-		if (Signal::Instance().infos.find(signalValue) !=
-			Signal::Instance().infos.end()) {
+		if (Signal::Instance().infos.find(signalValue) != Signal::Instance().infos.end()) {
 			handler = Signal::Instance().infos.at(signalValue);
 		}
 	}

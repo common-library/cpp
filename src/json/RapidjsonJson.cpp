@@ -13,8 +13,7 @@ bool RapidjsonJson::ParsingFromString(const string &contents) const {
 		return false;
 	}
 
-	this->documentOrg.CopyFrom(this->document,
-							   this->documentOrg.GetAllocator());
+	this->documentOrg.CopyFrom(this->document, this->documentOrg.GetAllocator());
 
 	return true;
 }
@@ -27,8 +26,7 @@ any RapidjsonJson::GetObject(const vector<string> &key) const {
 	rapidjson::Value &value = this->document[key[0].c_str()];
 
 	for (unsigned int index = 1; index < key.size(); ++index) {
-		if (value.IsObject() == false ||
-			value.HasMember(key[index].c_str()) == false) {
+		if (value.IsObject() == false || value.HasMember(key[index].c_str()) == false) {
 			return any{};
 		}
 
@@ -66,8 +64,7 @@ any RapidjsonJson::GetValueDerived(const rapidjson::Value &value) const {
 	return any{};
 }
 
-vector<map<string, any>>
-RapidjsonJson::GetArray(const vector<string> &key) const {
+vector<map<string, any>> RapidjsonJson::GetArray(const vector<string> &key) const {
 	const auto object = this->GetObject(key);
 	if (object.has_value() == false) {
 		return {};
@@ -84,8 +81,7 @@ RapidjsonJson::GetArray(const vector<string> &key) const {
 
 		if (iter1.IsObject()) {
 			for (auto &iter2 : iter1.GetObject()) {
-				temp[iter2.name.GetString()] =
-					this->GetValueDerived(iter2.value);
+				temp[iter2.name.GetString()] = this->GetValueDerived(iter2.value);
 			}
 		} else {
 			temp[""] = this->GetValueDerived(iter1);

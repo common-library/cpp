@@ -26,8 +26,7 @@ class SocketServer {
 		SocketServer();
 		virtual ~SocketServer();
 
-		bool Start(const in_port_t &port, const int &timeout,
-				   const poolSizeType &poolSize,
+		bool Start(const in_port_t &port, const int &timeout, const poolSizeType &poolSize,
 				   const function<void(const SocketClient &socketClient)> &job);
 		bool Stop();
 

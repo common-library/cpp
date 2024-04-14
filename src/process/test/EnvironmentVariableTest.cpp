@@ -18,31 +18,25 @@ class EnvironmentVariableTest : public ::testing::Test {
 			EXPECT_TRUE(this->environmentVariable.Initialize(0, nullptr));
 
 			int argc1 = 3;
-			char *argv1[] = {(char *)binaryPath.c_str(), (char *)"-c",
-							 (char *)""};
+			char *argv1[] = {(char *)binaryPath.c_str(), (char *)"-c", (char *)""};
 			EXPECT_FALSE(this->environmentVariable.Initialize(argc1, argv1));
 
 			int argc2 = 3;
-			char *argv2[] = {(char *)binaryPath.c_str(), (char *)"-c",
-							 (char *)"invalid"};
+			char *argv2[] = {(char *)binaryPath.c_str(), (char *)"-c", (char *)"invalid"};
 			EXPECT_FALSE(this->environmentVariable.Initialize(argc2, argv2));
 		}
 
 		void TearDown() override {
 			EXPECT_STREQ(this->environmentVariable.Usage().c_str(),
-						 ("usage: " + this->binaryName + " -c config_path [-s]")
-							 .c_str());
-			EXPECT_STREQ(this->environmentVariable.GetConfigPath().c_str(),
-						 CONFIG_PATH.c_str());
-			EXPECT_STREQ(this->environmentVariable.GetBinaryName().c_str(),
-						 binaryName.c_str());
+						 ("usage: " + this->binaryName + " -c config_path [-s]").c_str());
+			EXPECT_STREQ(this->environmentVariable.GetConfigPath().c_str(), CONFIG_PATH.c_str());
+			EXPECT_STREQ(this->environmentVariable.GetBinaryName().c_str(), binaryName.c_str());
 		}
 };
 
 TEST_F(EnvironmentVariableTest, Initialize_1) {
 	int argc = 3;
-	char *argv[] = {(char *)binaryPath.c_str(), (char *)"-c",
-					(char *)CONFIG_PATH.c_str()};
+	char *argv[] = {(char *)binaryPath.c_str(), (char *)"-c", (char *)CONFIG_PATH.c_str()};
 
 	EXPECT_TRUE(this->environmentVariable.Initialize(argc, argv));
 

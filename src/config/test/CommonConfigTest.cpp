@@ -3,8 +3,6 @@
 #include "gtest/gtest.h"
 #include <memory>
 
-using namespace std;
-
 static unique_ptr<CommonConfig> get_config() {
 	auto commonConfig = make_unique<CommonConfig>();
 
@@ -24,9 +22,7 @@ TEST(CommonConfigTest, GetFileName) {
 	EXPECT_STREQ(get_config()->GetFileName().c_str(), "common.config");
 }
 
-TEST(CommonConfigTest, GetLogLevel) {
-	EXPECT_EQ(get_config()->GetLogLevel(), LOG_LEVEL::DEBUG);
-}
+TEST(CommonConfigTest, GetLogLevel) { EXPECT_EQ(get_config()->GetLogLevel(), LOG_LEVEL::DEBUG); }
 
 TEST(CommonConfigTest, GetWorkingPath) {
 	EXPECT_STREQ(get_config()->GetWorkingPath().c_str(), "/tmp/test/");
@@ -40,10 +36,6 @@ TEST(CommonConfigTest, GetLogFileName) {
 	EXPECT_STREQ(get_config()->GetLogFileName().c_str(), "test");
 }
 
-TEST(CommonConfigTest, GetLogLinePrint) {
-	EXPECT_TRUE(get_config()->GetLogLinePrint());
-}
+TEST(CommonConfigTest, GetLogLinePrint) { EXPECT_TRUE(get_config()->GetLogLinePrint()); }
 
-TEST(CommonConfigTest, GetLogThreadMode) {
-	EXPECT_TRUE(get_config()->GetLogThreadMode());
-}
+TEST(CommonConfigTest, GetLogThreadMode) { EXPECT_TRUE(get_config()->GetLogThreadMode()); }

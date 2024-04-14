@@ -2,6 +2,7 @@
 #include "gtest/gtest.h"
 #include <cstring>
 #include <fcntl.h>
+#include <filesystem>
 #include <future>
 #include <map>
 #include <ranges>
@@ -16,8 +17,7 @@ TEST(FileManagerTest, IsExist) {
 	vector<future<void>> futures = {};
 	for (int i = 0; i < repetitionCount; ++i) {
 		futures.push_back(async(launch::async, [i]() {
-			const auto path = FileManager::Instance().GetTempPath() +
-							  "/tmpXXXXXX_" + to_string(i);
+			const auto path = FileManager::Instance().GetTempPath() + "/tmpXXXXXX_" + to_string(i);
 
 			EXPECT_FALSE(FileManager::Instance().IsExist(path));
 
@@ -46,8 +46,7 @@ TEST(FileManagerTest, IsRegularFile) {
 		futures.push_back(async(launch::async, [i, dirPath]() {
 			const auto filePath = dirPath + "/test_" + to_string(i) + ".txt";
 
-			EXPECT_TRUE(
-				FileManager::Instance().Write(filePath, "data", ios::trunc));
+			EXPECT_TRUE(FileManager::Instance().Write(filePath, "data", ios::trunc));
 
 			EXPECT_FALSE(FileManager::Instance().IsRegularFile(dirPath));
 			EXPECT_TRUE(FileManager::Instance().IsRegularFile(filePath));
@@ -68,13 +67,12 @@ TEST(FileManagerTest, IsDirectory) {
 	vector<future<void>> futures = {};
 	for (int i = 0; i < repetitionCount; ++i) {
 		futures.push_back(async(launch::async, [i]() {
-			const auto dirPath = FileManager::Instance().GetTempPath() +
-								 "/tmpXXXXXX_" + to_string(i);
+			const auto dirPath =
+				FileManager::Instance().GetTempPath() + "/tmpXXXXXX_" + to_string(i);
 			EXPECT_TRUE(FileManager::Instance().MakeDir(dirPath));
 
 			const auto filePath = dirPath + "/test.txt";
-			EXPECT_TRUE(
-				FileManager::Instance().Write(filePath, "data", ios::trunc));
+			EXPECT_TRUE(FileManager::Instance().Write(filePath, "data", ios::trunc));
 
 			EXPECT_TRUE(FileManager::Instance().IsDirectory(dirPath));
 			EXPECT_FALSE(FileManager::Instance().IsDirectory(filePath));
@@ -166,8 +164,7 @@ TEST(FileManagerTest, Read) {
 		futures.push_back(async(launch::async, [dirPath, i]() {
 			const auto filePath = dirPath + "/test_" + to_string(i) + ".txt";
 
-			EXPECT_TRUE(FileManager::Instance().Write(filePath, to_string(i),
-													  ios::trunc));
+			EXPECT_TRUE(FileManager::Instance().Write(filePath, to_string(i), ios::trunc));
 
 			const auto result = FileManager::Instance().Read(filePath);
 			EXPECT_TRUE(get<0>(result));
@@ -194,8 +191,7 @@ TEST(FileManagerTest, Write1) {
 		futures.push_back(async(launch::async, [dirPath, i]() {
 			const auto filePath = dirPath + "/test_" + to_string(i) + ".txt";
 
-			EXPECT_TRUE(FileManager::Instance().Write(filePath, to_string(i),
-													  ios::trunc));
+			EXPECT_TRUE(FileManager::Instance().Write(filePath, to_string(i), ios::trunc));
 
 			const auto result = FileManager::Instance().Read(filePath);
 			EXPECT_TRUE(get<0>(result));
@@ -221,8 +217,7 @@ TEST(FileManagerTest, Write2) {
 	vector<future<void>> futures = {};
 	for (int i = 0; i < repetitionCount; ++i) {
 		futures.push_back(async(launch::async, [filePath, i]() {
-			EXPECT_TRUE(FileManager::Instance().Write(
-				filePath, to_string(i) + "-", ios::app));
+			EXPECT_TRUE(FileManager::Instance().Write(filePath, to_string(i) + "-", ios::app));
 		}));
 	}
 
@@ -235,8 +230,8 @@ TEST(FileManagerTest, Write2) {
 
 	map<string, int> result{};
 	EXPECT_TRUE(get<0>(FileManager::Instance().Read(filePath)));
-	for (const auto &iter : ranges::views::split(
-			 get<1>(FileManager::Instance().Read(filePath)), '-')) {
+	for (const auto &iter :
+		 ranges::views::split(get<1>(FileManager::Instance().Read(filePath)), '-')) {
 		++result[string(iter.begin(), iter.end())];
 	}
 
@@ -272,8 +267,7 @@ TEST(FileManagerTest, MakeDir) {
 			EXPECT_STREQ(strerror(errno), "No such file or directory");
 
 			const auto fileName = path + "/test.txt";
-			EXPECT_TRUE(
-				FileManager::Instance().Write(fileName, "data", ios::trunc));
+			EXPECT_TRUE(FileManager::Instance().Write(fileName, "data", ios::trunc));
 			EXPECT_FALSE(FileManager::Instance().MakeDir(fileName));
 			EXPECT_EQ(errno, 17);
 			EXPECT_STREQ(strerror(errno), "File exists");
@@ -308,8 +302,7 @@ TEST(FileManagerTest, MakeDirs) {
 			EXPECT_TRUE(FileManager::Instance().MakeDirs(path));
 
 			const auto fileName = path + "/test.txt";
-			EXPECT_TRUE(
-				FileManager::Instance().Write(fileName, "data", ios::trunc));
+			EXPECT_TRUE(FileManager::Instance().Write(fileName, "data", ios::trunc));
 			EXPECT_FALSE(FileManager::Instance().MakeDirs(fileName));
 			EXPECT_EQ(errno, 20);
 			EXPECT_STREQ(strerror(errno), "Not a directory");
@@ -333,12 +326,10 @@ TEST(FileManagerTest, Copy) {
 	vector<future<void>> futures = {};
 	for (int i = 0; i < repetitionCount; ++i) {
 		futures.push_back(async(launch::async, [i, dirPath]() {
-			const auto fromFilePath =
-				dirPath + "/from_" + to_string(i) + ".txt";
+			const auto fromFilePath = dirPath + "/from_" + to_string(i) + ".txt";
 			const auto toFilePath = dirPath + "/to_" + to_string(i) + ".txt";
 
-			EXPECT_TRUE(FileManager::Instance().Write(
-				fromFilePath, to_string(i), ios::trunc));
+			EXPECT_TRUE(FileManager::Instance().Write(fromFilePath, to_string(i), ios::trunc));
 
 			EXPECT_TRUE(FileManager::Instance().Copy(fromFilePath, toFilePath));
 			EXPECT_EQ(errno, 0);
@@ -379,22 +370,18 @@ TEST(FileManagerTest, Copy_with_option) {
 			const auto dirName = "dir";
 			const auto fileName = "file";
 
-			EXPECT_TRUE(
-				FileManager::Instance().MakeDir(fromDirPath + "/" + dirName));
-			EXPECT_TRUE(FileManager::Instance().Write(
-				fromDirPath + "/" + fileName, to_string(i), ios::trunc));
+			EXPECT_TRUE(FileManager::Instance().MakeDir(fromDirPath + "/" + dirName));
+			EXPECT_TRUE(FileManager::Instance().Write(fromDirPath + "/" + fileName, to_string(i),
+													  ios::trunc));
 
-			EXPECT_TRUE(FileManager::Instance().Copy(
-				fromDirPath, toDirPath,
-				filesystem::copy_options::directories_only |
-					filesystem::copy_options::recursive));
+			EXPECT_TRUE(FileManager::Instance().Copy(fromDirPath, toDirPath,
+													 filesystem::copy_options::directories_only |
+														 filesystem::copy_options::recursive));
 			EXPECT_EQ(errno, 0);
 			EXPECT_STREQ(strerror(errno), "Success");
 
-			EXPECT_TRUE(
-				FileManager::Instance().IsExist(toDirPath + "/" + dirName));
-			EXPECT_FALSE(
-				FileManager::Instance().IsExist(toDirPath + "/" + fileName));
+			EXPECT_TRUE(FileManager::Instance().IsExist(toDirPath + "/" + dirName));
+			EXPECT_FALSE(FileManager::Instance().IsExist(toDirPath + "/" + fileName));
 		}));
 	}
 
@@ -427,20 +414,16 @@ TEST(FileManagerTest, CopyAll) {
 			const auto dirName = "dir";
 			const auto fileName = "file";
 
-			EXPECT_TRUE(
-				FileManager::Instance().MakeDir(fromDirPath + "/" + dirName));
-			EXPECT_TRUE(FileManager::Instance().Write(
-				fromDirPath + "/" + fileName, to_string(i), ios::trunc));
+			EXPECT_TRUE(FileManager::Instance().MakeDir(fromDirPath + "/" + dirName));
+			EXPECT_TRUE(FileManager::Instance().Write(fromDirPath + "/" + fileName, to_string(i),
+													  ios::trunc));
 
-			EXPECT_TRUE(
-				FileManager::Instance().CopyAll(fromDirPath, toDirPath));
+			EXPECT_TRUE(FileManager::Instance().CopyAll(fromDirPath, toDirPath));
 			EXPECT_EQ(errno, 0);
 			EXPECT_STREQ(strerror(errno), "Success");
 
-			EXPECT_TRUE(
-				FileManager::Instance().IsExist(toDirPath + "/" + dirName));
-			EXPECT_TRUE(
-				FileManager::Instance().IsExist(toDirPath + "/" + fileName));
+			EXPECT_TRUE(FileManager::Instance().IsExist(toDirPath + "/" + dirName));
+			EXPECT_TRUE(FileManager::Instance().IsExist(toDirPath + "/" + fileName));
 		}));
 	}
 
@@ -461,10 +444,8 @@ TEST(FileManagerTest, Remove) {
 	vector<future<void>> futures = {};
 	for (int i = 0; i < repetitionCount; ++i) {
 		futures.push_back(async(launch::async, [i, tempPath]() {
-			const auto filePath =
-				tempPath + "/" + "test_" + to_string(i) + "txt";
-			EXPECT_TRUE(FileManager::Instance().Write(filePath, to_string(i),
-													  ios::trunc));
+			const auto filePath = tempPath + "/" + "test_" + to_string(i) + "txt";
+			EXPECT_TRUE(FileManager::Instance().Write(filePath, to_string(i), ios::trunc));
 			EXPECT_TRUE(FileManager::Instance().IsRegularFile(filePath));
 			EXPECT_TRUE(FileManager::Instance().Remove(filePath));
 			EXPECT_EQ(errno, 0);
@@ -479,8 +460,7 @@ TEST(FileManagerTest, Remove) {
 			EXPECT_STREQ(strerror(errno), "Success");
 			EXPECT_FALSE(FileManager::Instance().IsExist(dirPath));
 
-			const auto depthPath =
-				dirPath + "/" + to_string(i) + "/" + to_string(i);
+			const auto depthPath = dirPath + "/" + to_string(i) + "/" + to_string(i);
 			EXPECT_TRUE(FileManager::Instance().MakeDirs(depthPath));
 			EXPECT_TRUE(FileManager::Instance().IsDirectory(depthPath));
 			EXPECT_FALSE(FileManager::Instance().Remove(dirPath));
@@ -507,8 +487,7 @@ TEST(FileManagerTest, RemoveAll) {
 	for (int i = 0; i < repetitionCount; ++i) {
 		futures.push_back(async(launch::async, [i, tempPath]() {
 			const auto dirPath = tempPath + "/" + to_string(i);
-			const auto depthPath =
-				dirPath + "/" + to_string(i) + "/" + to_string(i);
+			const auto depthPath = dirPath + "/" + to_string(i) + "/" + to_string(i);
 			EXPECT_TRUE(FileManager::Instance().MakeDirs(depthPath));
 			EXPECT_TRUE(FileManager::Instance().IsDirectory(depthPath));
 			EXPECT_TRUE(FileManager::Instance().RemoveAll(dirPath));
@@ -531,9 +510,8 @@ TEST(FileManagerTest, ToAbsolutePath) {
 	vector<future<void>> futures = {};
 	for (int i = 0; i < repetitionCount; ++i) {
 		futures.push_back(async(launch::async, [i]() {
-			EXPECT_STREQ(
-				FileManager::Instance().ToAbsolutePath("./").c_str(),
-				(FileManager::Instance().GetCurrentPath() + "/./").c_str());
+			EXPECT_STREQ(FileManager::Instance().ToAbsolutePath("./").c_str(),
+						 (FileManager::Instance().GetCurrentPath() + "/./").c_str());
 		}));
 	}
 
@@ -566,12 +544,10 @@ TEST(FileManagerTest, ToRelativePathToRootPath) {
 	vector<future<void>> futures = {};
 	for (int i = 0; i < repetitionCount; ++i) {
 		futures.push_back(async(launch::async, [i]() {
-			const auto path =
-				FileManager::Instance().GetCurrentPath() + "/" + to_string(i);
+			const auto path = FileManager::Instance().GetCurrentPath() + "/" + to_string(i);
 
-			EXPECT_STREQ(
-				FileManager::Instance().ToRelativePathToRootPath(path).c_str(),
-				path.data() + FileManager::Instance().GetRootPath(path).size());
+			EXPECT_STREQ(FileManager::Instance().ToRelativePathToRootPath(path).c_str(),
+						 path.data() + FileManager::Instance().GetRootPath(path).size());
 		}));
 	}
 
@@ -606,23 +582,19 @@ TEST(FileManagerTest, GetRootPath) {
 	vector<future<void>> futures = {};
 	for (int i = 0; i < repetitionCount; ++i) {
 		futures.push_back(async(launch::async, []() {
-			EXPECT_STREQ(FileManager::Instance().GetRootPath("./a").c_str(),
-						 "");
+			EXPECT_STREQ(FileManager::Instance().GetRootPath("./a").c_str(), "");
 			EXPECT_EQ(errno, 0);
 			EXPECT_STREQ(strerror(errno), "Success");
 
-			EXPECT_STREQ(FileManager::Instance().GetRootPath("./a/b").c_str(),
-						 "");
+			EXPECT_STREQ(FileManager::Instance().GetRootPath("./a/b").c_str(), "");
 			EXPECT_EQ(errno, 0);
 			EXPECT_STREQ(strerror(errno), "Success");
 
-			EXPECT_STREQ(FileManager::Instance().GetRootPath("/a").c_str(),
-						 "/");
+			EXPECT_STREQ(FileManager::Instance().GetRootPath("/a").c_str(), "/");
 			EXPECT_EQ(errno, 0);
 			EXPECT_STREQ(strerror(errno), "Success");
 
-			EXPECT_STREQ(FileManager::Instance().GetRootPath("/a/b").c_str(),
-						 "/");
+			EXPECT_STREQ(FileManager::Instance().GetRootPath("/a/b").c_str(), "/");
 			EXPECT_EQ(errno, 0);
 			EXPECT_STREQ(strerror(errno), "Success");
 		}));
@@ -641,13 +613,11 @@ TEST(FileManagerTest, GetRelativePath) {
 	for (int i = 0; i < repetitionCount; ++i) {
 		futures.push_back(async(launch::async, [i]() {
 			const string dirName = to_string(i);
-			EXPECT_STREQ(
-				FileManager::Instance().GetRelativePath("./" + dirName).c_str(),
-				dirName.c_str());
+			EXPECT_STREQ(FileManager::Instance().GetRelativePath("./" + dirName).c_str(),
+						 dirName.c_str());
 			EXPECT_STREQ(
 				FileManager::Instance()
-					.GetRelativePath(FileManager::Instance().GetCurrentPath() +
-									 "/" + dirName)
+					.GetRelativePath(FileManager::Instance().GetCurrentPath() + "/" + dirName)
 					.c_str(),
 				dirName.c_str());
 		}));
@@ -677,8 +647,7 @@ TEST(FileManagerTest, GetSubDirectories) {
 				EXPECT_TRUE(FileManager::Instance().MakeDirs(iter));
 			}
 
-			EXPECT_EQ(
-				FileManager::Instance().GetSubDirectories(basePath).size(), 1);
+			EXPECT_EQ(FileManager::Instance().GetSubDirectories(basePath).size(), 1);
 			EXPECT_TRUE(FileManager::Instance().GetSubDirectories(basePath) ==
 						vector<string>{paths.at(0)});
 		}));
@@ -710,8 +679,7 @@ TEST(FileManagerTest, GetRecursivePathList) {
 				EXPECT_TRUE(FileManager::Instance().MakeDirs(iter));
 			}
 
-			EXPECT_TRUE(FileManager::Instance().GetRecursiveSubDirectories(
-							basePath) == paths);
+			EXPECT_TRUE(FileManager::Instance().GetRecursiveSubDirectories(basePath) == paths);
 		}));
 	}
 
@@ -753,6 +721,5 @@ TEST(FileManagerTest, SetCurrentPath) {
 	EXPECT_EQ(errno, 0);
 	EXPECT_STREQ(strerror(errno), "Success");
 
-	EXPECT_STREQ(FileManager::Instance().GetCurrentPath().c_str(),
-				 tempPath.c_str());
+	EXPECT_STREQ(FileManager::Instance().GetCurrentPath().c_str(), tempPath.c_str());
 }

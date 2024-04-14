@@ -11,9 +11,8 @@ using namespace std;
 
 template <typename T>
 concept json_data_type =
-	is_same<T, nullptr_t>::value || is_same<T, bool>::value ||
-	is_same<T, int64_t>::value || is_same<T, uint64_t>::value ||
-	is_same<T, double>::value || is_same<T, string>::value;
+	is_same<T, nullptr_t>::value || is_same<T, bool>::value || is_same<T, int64_t>::value ||
+	is_same<T, uint64_t>::value || is_same<T, double>::value || is_same<T, string>::value;
 
 class Json {
 	private:
@@ -57,6 +56,5 @@ class Json {
 			return any_cast<T>(this->GetValueDerived(this->GetObject(key)));
 		}
 
-		virtual vector<map<string, any>>
-		GetArray(const vector<string> &key) const = 0;
+		virtual vector<map<string, any>> GetArray(const vector<string> &key) const = 0;
 };

@@ -3,12 +3,9 @@
 #include <future>
 #include <mutex>
 
-using namespace std;
-
 ThreadPool::ThreadPool(const poolSizeType &poolSize)
 	: stop(false), poolSize(poolSize), wakeUpAdmin(true) {
-	this->futureAdmin =
-		async(launch::async, mem_fn(&ThreadPool::AdminWorker), this);
+	this->futureAdmin = async(launch::async, mem_fn(&ThreadPool::AdminWorker), this);
 }
 
 ThreadPool::~ThreadPool() {
@@ -29,15 +26,13 @@ void ThreadPool::AdminWorker() {
 	while (true) {
 		unique_lock<mutex> lock(this->mutexAdmin);
 
-		this->cvAdmin.wait(
-			lock, [this]() { return this->wakeUpAdmin || this->stop; });
+		this->cvAdmin.wait(lock, [this]() { return this->wakeUpAdmin || this->stop; });
 
 		if (this->stop && this->runningUser == 0) {
 			break;
 		}
 
-		for (auto iter = this->futureUser.begin();
-			 iter != this->futureUser.end();) {
+		for (auto iter = this->futureUser.begin(); iter != this->futureUser.end();) {
 
 			switch (iter->wait_for(1ns)) {
 			case future_status::ready:
@@ -52,10 +47,8 @@ void ThreadPool::AdminWorker() {
 			}
 		}
 
-		for (poolSizeType index = this->futureUser.size();
-			 index < this->poolSize; ++index) {
-			this->futureUser.push_back(
-				async(launch::async, mem_fn(&ThreadPool::UserWorker), this));
+		for (poolSizeType index = this->futureUser.size(); index < this->poolSize; ++index) {
+			this->futureUser.push_back(async(launch::async, mem_fn(&ThreadPool::UserWorker), this));
 		}
 
 		if (this->futureUser.size() == this->poolSize) {
@@ -73,8 +66,7 @@ void ThreadPool::UserWorker() {
 	while (true) {
 		unique_lock<mutex> lock(this->mutexUser);
 
-		this->cvUser.wait(
-			lock, [this]() { return this->stop || this->queueUserJob.size(); });
+		this->cvUser.wait(lock, [this]() { return this->stop || this->queueUserJob.size(); });
 
 		if (this->stop && this->queueUserJob.empty()) {
 			break;

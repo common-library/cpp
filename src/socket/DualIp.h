@@ -43,9 +43,8 @@ class DualIp {
 
 		IP_TYPE GetIpType() const;
 
-		addrinfo *GetAddrInfo(const string &address, const in_port_t &port,
-							  const int &family, const int &sockType,
-							  const int &flags) const;
+		addrinfo *GetAddrInfo(const string &address, const in_port_t &port, const int &family,
+							  const int &sockType, const int &flags) const;
 
 	public:
 		DualIp(const sockaddr_storage &sockAddrStorage);

@@ -22,9 +22,8 @@ enum class LOG_LEVEL {
 };
 
 static const map<LOG_LEVEL, string_view> LOG_LEVEL_INFO = {
-	{LOG_LEVEL::DEBUG, "DEBUG"},	   {LOG_LEVEL::INFO, "INFO"},
-	{LOG_LEVEL::WARNING, "WARNING"},   {LOG_LEVEL::ERROR, "ERROR"},
-	{LOG_LEVEL::CRITICAL, "CRITICAL"},
+	{LOG_LEVEL::DEBUG, "DEBUG"}, {LOG_LEVEL::INFO, "INFO"},			{LOG_LEVEL::WARNING, "WARNING"},
+	{LOG_LEVEL::ERROR, "ERROR"}, {LOG_LEVEL::CRITICAL, "CRITICAL"},
 };
 
 class FileLog {
@@ -48,16 +47,13 @@ class FileLog {
 
 		condition_variable cv;
 
-		string MakeLog(const LOG_LEVEL &logLevel, const bool &linePrint,
-					   const string &log, const tm &sTm,
-					   const source_location &sourceLocation);
+		string MakeLog(const LOG_LEVEL &logLevel, const bool &linePrint, const string &log,
+					   const tm &sTm, const source_location &sourceLocation);
 
-		string MakeFullPath(const string &outputPath, const string &fileName,
-							const tm &sTm);
+		string MakeFullPath(const string &outputPath, const string &fileName, const tm &sTm);
 
-		bool Print(const LOG_LEVEL &logLevel, const string &outputPath,
-				   const string &fileName, const bool &linePrint,
-				   const string &log, const time_t &time,
+		bool Print(const LOG_LEVEL &logLevel, const string &outputPath, const string &fileName,
+				   const bool &linePrint, const string &log, const time_t &time,
 				   const source_location &sourceLocation);
 
 		bool Logging(const LOG_LEVEL &logLevel, const string &log,
@@ -68,20 +64,19 @@ class FileLog {
 
 		~FileLog();
 
-		bool Initialize(const LOG_LEVEL &logLevel, const string &outputPath,
-						const string &fileName, const bool &linePrint,
-						const bool &threadMode);
+		bool Initialize(const LOG_LEVEL &logLevel, const string &outputPath, const string &fileName,
+						const bool &linePrint, const bool &threadMode);
 
-		bool Debug(const string &log, const source_location &sourceLocation =
-										  source_location::current());
-		bool Info(const string &log, const source_location &sourceLocation =
-										 source_location::current());
-		bool Warning(const string &log, const source_location &sourceLocation =
-											source_location::current());
-		bool Error(const string &log, const source_location &sourceLocation =
-										  source_location::current());
-		bool Critical(const string &log, const source_location &sourceLocation =
-											 source_location::current());
+		bool Debug(const string &log,
+				   const source_location &sourceLocation = source_location::current());
+		bool Info(const string &log,
+				  const source_location &sourceLocation = source_location::current());
+		bool Warning(const string &log,
+					 const source_location &sourceLocation = source_location::current());
+		bool Error(const string &log,
+				   const source_location &sourceLocation = source_location::current());
+		bool Critical(const string &log,
+					  const source_location &sourceLocation = source_location::current());
 
 		bool Flush();
 

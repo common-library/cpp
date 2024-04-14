@@ -16,36 +16,30 @@ using namespace std;
 static void check(const LOG_LEVEL &logLevel) {
 	FileLog fileLog;
 
-	const vector<function<bool()>> loggings{
-		[&fileLog]() { return fileLog.Debug("aaa"); },
-		[&fileLog]() { return fileLog.Info("bbb"); },
-		[&fileLog]() { return fileLog.Warning("ccc"); },
-		[&fileLog]() { return fileLog.Error("ddd"); },
-		[&fileLog]() { return fileLog.Critical("eee"); }};
+	const vector<function<bool()>> loggings{[&fileLog]() { return fileLog.Debug("aaa"); },
+											[&fileLog]() { return fileLog.Info("bbb"); },
+											[&fileLog]() { return fileLog.Warning("ccc"); },
+											[&fileLog]() { return fileLog.Error("ddd"); },
+											[&fileLog]() { return fileLog.Critical("eee"); }};
 
 	const map<bool, map<LOG_LEVEL, string>> answer = {
 		{true,
 		 {
-			 {LOG_LEVEL::DEBUG,
-			  ", DEBUG, " + PROJECT_SOURCE_DIR +
-				  "/src/log/test/FileLogTest.cpp:20, check(const "
-				  "LOG_LEVEL&)::<lambda()>] : aaa\r"},
-			 {LOG_LEVEL::INFO,
-			  ", INFO, " + PROJECT_SOURCE_DIR +
-				  "/src/log/test/FileLogTest.cpp:21, check(const "
-				  "LOG_LEVEL&)::<lambda()>] : bbb\r"},
-			 {LOG_LEVEL::WARNING,
-			  ", WARNING, " + PROJECT_SOURCE_DIR +
-				  "/src/log/test/FileLogTest.cpp:22, check(const "
-				  "LOG_LEVEL&)::<lambda()>] : ccc\r"},
-			 {LOG_LEVEL::ERROR,
-			  ", ERROR, " + PROJECT_SOURCE_DIR +
-				  "/src/log/test/FileLogTest.cpp:23, check(const "
-				  "LOG_LEVEL&)::<lambda()>] : ddd\r"},
-			 {LOG_LEVEL::CRITICAL,
-			  ", CRITICAL, " + PROJECT_SOURCE_DIR +
-				  "/src/log/test/FileLogTest.cpp:24, "
-				  "check(const LOG_LEVEL&)::<lambda()>] : eee\r"},
+			 {LOG_LEVEL::DEBUG, ", DEBUG, " + PROJECT_SOURCE_DIR +
+									"/src/log/test/FileLogTest.cpp:19, check(const "
+									"LOG_LEVEL&)::<lambda()>] : aaa\r"},
+			 {LOG_LEVEL::INFO, ", INFO, " + PROJECT_SOURCE_DIR +
+								   "/src/log/test/FileLogTest.cpp:20, check(const "
+								   "LOG_LEVEL&)::<lambda()>] : bbb\r"},
+			 {LOG_LEVEL::WARNING, ", WARNING, " + PROJECT_SOURCE_DIR +
+									  "/src/log/test/FileLogTest.cpp:21, check(const "
+									  "LOG_LEVEL&)::<lambda()>] : ccc\r"},
+			 {LOG_LEVEL::ERROR, ", ERROR, " + PROJECT_SOURCE_DIR +
+									"/src/log/test/FileLogTest.cpp:22, check(const "
+									"LOG_LEVEL&)::<lambda()>] : ddd\r"},
+			 {LOG_LEVEL::CRITICAL, ", CRITICAL, " + PROJECT_SOURCE_DIR +
+									   "/src/log/test/FileLogTest.cpp:23, "
+									   "check(const LOG_LEVEL&)::<lambda()>] : eee\r"},
 		 }},
 		{false,
 		 {
@@ -57,21 +51,18 @@ static void check(const LOG_LEVEL &logLevel) {
 		 }}};
 
 	const int count = 1000;
-	const vector<string> outputPaths{
-		FileManager::Instance().GetTempPath() + "/tmpXXXXXX_1",
-		FileManager::Instance().GetTempPath() + "/tmpXXXXXX_2"};
+	const vector<string> outputPaths{FileManager::Instance().GetTempPath() + "/tmpXXXXXX_1",
+									 FileManager::Instance().GetTempPath() + "/tmpXXXXXX_2"};
 	const vector<string> fileNames{"test1", "test2"};
 
 	for (const auto &iter : outputPaths) {
 		EXPECT_TRUE(FileManager::Instance().MakeDir(iter));
 	}
 
-	EXPECT_TRUE(fileLog.Initialize(logLevel, outputPaths.at(0), fileNames.at(0),
-								   false, true));
+	EXPECT_TRUE(fileLog.Initialize(logLevel, outputPaths.at(0), fileNames.at(0), false, true));
 
 	mutex m;
-	const auto job = [&m, &fileLog, &count, &outputPaths,
-					  &fileNames](const auto &func) {
+	const auto job = [&m, &fileLog, &count, &outputPaths, &fileNames](const auto &func) {
 		for (int i = 0; i < count; ++i) {
 			lock_guard<mutex> lock(m);
 
@@ -105,12 +96,10 @@ static void check(const LOG_LEVEL &logLevel) {
 	for (const auto &iter : outputPaths) {
 		map<string, int> result;
 		result.clear();
-		for (const auto &iter2 :
-			 FileManager::Instance().GetSubDirectories(iter)) {
+		for (const auto &iter2 : FileManager::Instance().GetSubDirectories(iter)) {
 			const auto readResult = FileManager::Instance().Read(iter2);
 			EXPECT_TRUE(get<0>(readResult));
-			for (const auto &iter3 :
-				 ranges::views::split(get<1>(readResult), '\n')) {
+			for (const auto &iter3 : ranges::views::split(get<1>(readResult), '\n')) {
 				const auto temp = string(iter3.begin(), iter3.end());
 				if (temp.empty()) {
 					continue;
@@ -143,8 +132,7 @@ static void check(const LOG_LEVEL &logLevel) {
 TEST(FileLogTest, Initialize) {
 	FileLog fileLog;
 
-	EXPECT_TRUE(
-		fileLog.Initialize(LOG_LEVEL::DEBUG, "/tmp", "test", true, true));
+	EXPECT_TRUE(fileLog.Initialize(LOG_LEVEL::DEBUG, "/tmp", "test", true, true));
 
 	EXPECT_EQ(LOG_LEVEL::DEBUG, fileLog.GetLogLevel());
 	EXPECT_STREQ("/tmp", fileLog.GetOutputPath().c_str());

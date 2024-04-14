@@ -16,9 +16,7 @@ FileLog::FileLog() : condition(true), initialize(false) {
 		while (this->condition) {
 			unique_lock<mutex> lock(this->mutexForCv);
 
-			this->cv.wait(lock, [&]() {
-				return this->jobs.size() || this->condition == false;
-			});
+			this->cv.wait(lock, [&]() { return this->jobs.size() || this->condition == false; });
 
 			this->Flush();
 		}
@@ -35,8 +33,7 @@ FileLog::~FileLog() {
 }
 
 bool FileLog::Initialize(const LOG_LEVEL &logLevel, const string &outputPath,
-						 const string &fileName, const bool &linePrint,
-						 const bool &threadMode) {
+						 const string &fileName, const bool &linePrint, const bool &threadMode) {
 	lock_guard<mutex> lock(this->mutexForSettings);
 
 	this->logLevel = logLevel;
@@ -50,49 +47,42 @@ bool FileLog::Initialize(const LOG_LEVEL &logLevel, const string &outputPath,
 	return true;
 }
 
-string FileLog::MakeLog(const LOG_LEVEL &logLevel, const bool &linePrint,
-						const string &log, const tm &sTm,
-						const source_location &sourceLocation) {
+string FileLog::MakeLog(const LOG_LEVEL &logLevel, const bool &linePrint, const string &log,
+						const tm &sTm, const source_location &sourceLocation) {
 	stringstream ss;
 
 	ss << put_time(&sTm, "%H:%M:%S");
 
 	if (linePrint) {
-		return format("[{}, {}, {}:{}, {}] : {}\r\n", ss.str(),
-					  LOG_LEVEL_INFO.at(logLevel), sourceLocation.file_name(),
-					  to_string(sourceLocation.line()),
+		return format("[{}, {}, {}:{}, {}] : {}\r\n", ss.str(), LOG_LEVEL_INFO.at(logLevel),
+					  sourceLocation.file_name(), to_string(sourceLocation.line()),
 					  sourceLocation.function_name(), log);
 	}
 
-	return format("[{}, {}] : {}\r\n", ss.str(), LOG_LEVEL_INFO.at(logLevel),
-				  log);
+	return format("[{}, {}] : {}\r\n", ss.str(), LOG_LEVEL_INFO.at(logLevel), log);
 }
 
-string FileLog::MakeFullPath(const string &outputPath, const string &fileName,
-							 const tm &sTm) {
+string FileLog::MakeFullPath(const string &outputPath, const string &fileName, const tm &sTm) {
 	stringstream ss;
 
 	ss << put_time(&sTm, "%Y%m%d.log");
 
-	string finalFileName =
-		this->outputPath.size() ? this->outputPath + "/" : "  ";
+	string finalFileName = this->outputPath.size() ? this->outputPath + "/" : "  ";
 	finalFileName += this->fileName.size() ? this->fileName + string("_") : "";
 	finalFileName += ss.str();
 
 	return finalFileName;
 }
 
-bool FileLog::Print(const LOG_LEVEL &logLevel, const string &outputPath,
-					const string &fileName, const bool &linePrint,
-					const string &log, const time_t &time,
+bool FileLog::Print(const LOG_LEVEL &logLevel, const string &outputPath, const string &fileName,
+					const bool &linePrint, const string &log, const time_t &time,
 					const source_location &sourceLocation) {
 	tm sTm;
 	if (localtime_r(&time, &sTm) == nullptr) {
 		return false;
 	}
 
-	const string finalLog =
-		this->MakeLog(logLevel, linePrint, log, sTm, sourceLocation);
+	const string finalLog = this->MakeLog(logLevel, linePrint, log, sTm, sourceLocation);
 	if (this->initialize == false) {
 		printf("%s", finalLog.c_str());
 		return true;
@@ -101,11 +91,9 @@ bool FileLog::Print(const LOG_LEVEL &logLevel, const string &outputPath,
 	{
 		lock_guard<mutex> lock(this->mutexForJobs);
 
-		const string finalFullPath =
-			this->MakeFullPath(outputPath, fileName, sTm);
+		const string finalFullPath = this->MakeFullPath(outputPath, fileName, sTm);
 		jobs.push_back(async(launch::deferred, [finalFullPath, finalLog]() {
-			return FileManager::Instance().Write(finalFullPath, finalLog,
-												 ios::app);
+			return FileManager::Instance().Write(finalFullPath, finalLog, ios::app);
 		}));
 	}
 
@@ -127,8 +115,8 @@ bool FileLog::Logging(const LOG_LEVEL &logLevel, const string &log,
 		return true;
 	}
 
-	return this->Print(logLevel, this->outputPath, this->fileName,
-					   this->linePrint, log, time(nullptr), sourceLocation);
+	return this->Print(logLevel, this->outputPath, this->fileName, this->linePrint, log,
+					   time(nullptr), sourceLocation);
 }
 
 bool FileLog::Debug(const string &log, const source_location &sourceLocation) {
@@ -139,8 +127,7 @@ bool FileLog::Info(const string &log, const source_location &sourceLocation) {
 	return this->Logging(LOG_LEVEL::INFO, log, sourceLocation);
 }
 
-bool FileLog::Warning(const string &log,
-					  const source_location &sourceLocation) {
+bool FileLog::Warning(const string &log, const source_location &sourceLocation) {
 	return this->Logging(LOG_LEVEL::WARNING, log, sourceLocation);
 }
 
@@ -148,8 +135,7 @@ bool FileLog::Error(const string &log, const source_location &sourceLocation) {
 	return this->Logging(LOG_LEVEL::ERROR, log, sourceLocation);
 }
 
-bool FileLog::Critical(const string &log,
-					   const source_location &sourceLocation) {
+bool FileLog::Critical(const string &log, const source_location &sourceLocation) {
 	return this->Logging(LOG_LEVEL::CRITICAL, log, sourceLocation);
 }
 
@@ -159,8 +145,7 @@ bool FileLog::Flush() {
 	for (auto &iter : this->jobs) {
 		if (iter.valid()) {
 			if (iter.get() == false) {
-				printf("log error - errno : (%d), strerror : (%s)\n", errno,
-					   strerror(errno));
+				printf("log error - errno : (%d), strerror : (%s)\n", errno, strerror(errno));
 			}
 		}
 	}
@@ -201,12 +186,8 @@ void FileLog::SetFileName(const string &fileName) {
 
 bool FileLog::GetLinePrint() const { return this->linePrint; }
 
-void FileLog::SetLinePrint(const bool &linePrint) {
-	this->linePrint.store(linePrint);
-}
+void FileLog::SetLinePrint(const bool &linePrint) { this->linePrint.store(linePrint); }
 
 bool FileLog::GetThreadMode() const { return this->threadMode; }
 
-void FileLog::SetThreadMode(const bool &threadMode) {
-	this->threadMode.store(threadMode);
-}
+void FileLog::SetThreadMode(const bool &threadMode) { this->threadMode.store(threadMode); }

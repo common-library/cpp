@@ -9,9 +9,8 @@ string &trim(string &str) { return ltrim(rtrim(str)); }
 string trim_copy(string str) { return ltrim(rtrim(str)); }
 
 string &ltrim(string &str) {
-	str.erase(str.begin(), find_if(str.begin(), str.end(), [](unsigned char c) {
-				  return !isspace(c);
-			  }));
+	str.erase(str.begin(),
+			  find_if(str.begin(), str.end(), [](unsigned char c) { return !isspace(c); }));
 
 	return str;
 }
@@ -19,9 +18,7 @@ string &ltrim(string &str) {
 string ltrim_copy(string str) { return ltrim(str); }
 
 string &rtrim(string &str) {
-	str.erase(find_if(str.rbegin(), str.rend(),
-					  [](unsigned char c) { return !isspace(c); })
-				  .base(),
+	str.erase(find_if(str.rbegin(), str.rend(), [](unsigned char c) { return !isspace(c); }).base(),
 			  str.end());
 
 	return str;

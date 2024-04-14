@@ -1,5 +1,6 @@
 #include "FileManager.h"
 #include <fcntl.h>
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <string>
@@ -12,13 +13,11 @@ using namespace std;
 template <class T> static T run(const function<T(error_code &)> &func);
 
 template <class T>
-static T run(const function<T(const string &, error_code &)> &func,
-			 const string &path);
+static T run(const function<T(const string &, error_code &)> &func, const string &path);
 
 template <class T>
-static T
-run(const function<T(const string &, const string &, error_code &)> &func,
-	const string &fromPath, const string &toPath);
+static T run(const function<T(const string &, const string &, error_code &)> &func,
+			 const string &fromPath, const string &toPath);
 
 template <class T> static T run(const function<T(error_code &)> &func) {
 	error_code errorCode;
@@ -32,8 +31,7 @@ template <class T> static T run(const function<T(error_code &)> &func) {
 }
 
 template <class T>
-static T run(const function<T(const string &, error_code &)> &func,
-			 const string &path) {
+static T run(const function<T(const string &, error_code &)> &func, const string &path) {
 	error_code errorCode;
 	errorCode.clear();
 
@@ -45,9 +43,8 @@ static T run(const function<T(const string &, error_code &)> &func,
 }
 
 template <class T>
-static T
-run(const function<T(const string &, const string &, error_code &)> &func,
-	const string &fromPath, const string &toPath) {
+static T run(const function<T(const string &, const string &, error_code &)> &func,
+			 const string &fromPath, const string &toPath) {
 	error_code errorCode;
 	errorCode.clear();
 
@@ -82,8 +79,7 @@ bool FileManager::IsDirectory(const string &path) const {
 	return run<bool>(job, path);
 }
 
-int FileManager::LockBetweenProcess(const string &path,
-									const mode_t &mode) const {
+int FileManager::LockBetweenProcess(const string &path, const mode_t &mode) const {
 	const int fd = open(path.c_str(), O_CREAT | O_RDWR, mode);
 	if (fd < 0) {
 		return -1;
@@ -182,8 +178,7 @@ bool FileManager::MakeDirs(const string &path) const {
 	}
 
 	const auto job = [](const string &path, error_code &errorCode) {
-		return filesystem::create_directories(filesystem::path(path),
-											  errorCode);
+		return filesystem::create_directories(filesystem::path(path), errorCode);
 	};
 
 	return run<bool>(job, path);
@@ -194,8 +189,7 @@ bool FileManager::Copy(const string &fromPath, const string &toPath,
 	error_code errorCode;
 	errorCode.clear();
 
-	filesystem::copy(filesystem::path(fromPath), filesystem::path(toPath),
-					 options, errorCode);
+	filesystem::copy(filesystem::path(fromPath), filesystem::path(toPath), options, errorCode);
 
 	errno = errorCode.value();
 
@@ -203,8 +197,7 @@ bool FileManager::Copy(const string &fromPath, const string &toPath,
 }
 
 bool FileManager::CopyAll(const string &fromPath, const string &toPath) const {
-	const auto job = [](const string &fromPath, const string &toPath,
-						error_code &errorCode) {
+	const auto job = [](const string &fromPath, const string &toPath, error_code &errorCode) {
 		filesystem::copy(filesystem::path(fromPath), filesystem::path(toPath),
 						 filesystem::copy_options::recursive, errorCode);
 
@@ -274,21 +267,18 @@ vector<string> FileManager::GetSubDirectories(const string &path) const {
 	vector<string> paths;
 	paths.clear();
 
-	for (const filesystem::directory_entry &iter :
-		 filesystem::directory_iterator(path)) {
+	for (const filesystem::directory_entry &iter : filesystem::directory_iterator(path)) {
 		paths.push_back(iter.path());
 	}
 
 	return paths;
 }
 
-vector<string>
-FileManager::GetRecursiveSubDirectories(const string &path) const {
+vector<string> FileManager::GetRecursiveSubDirectories(const string &path) const {
 	vector<string> paths;
 	paths.clear();
 
-	for (const filesystem::directory_entry &iter :
-		 filesystem::recursive_directory_iterator(path)) {
+	for (const filesystem::directory_entry &iter : filesystem::recursive_directory_iterator(path)) {
 		paths.push_back(iter.path());
 	}
 
@@ -296,9 +286,7 @@ FileManager::GetRecursiveSubDirectories(const string &path) const {
 }
 
 string FileManager::GetCurrentPath() const {
-	const auto job = [](error_code &errorCode) {
-		return filesystem::current_path(errorCode);
-	};
+	const auto job = [](error_code &errorCode) { return filesystem::current_path(errorCode); };
 
 	return run<string>(job);
 }

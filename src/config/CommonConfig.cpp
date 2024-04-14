@@ -4,9 +4,8 @@
 using namespace std;
 
 CommonConfig::CommonConfig()
-	: Config("common.config"), logLevel(LOG_LEVEL::DEBUG), workingPath(""),
-	  logOutputPath(""), logFileName(""), logLinePrint(false),
-	  logThreadMode(false) {}
+	: Config("common.config"), logLevel(LOG_LEVEL::DEBUG), workingPath(""), logOutputPath(""),
+	  logFileName(""), logLinePrint(false), logThreadMode(false) {}
 
 bool CommonConfig::InitializeDerived() {
 	this->logLevel = LOG_LEVEL::DEBUG;

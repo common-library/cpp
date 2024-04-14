@@ -105,8 +105,7 @@ void check_contents1(const Json &json, const bool &doParsing) {
 													   {"value_2", {2, 4, 6}}};
 		for (const auto &iter1 : json.GetArray({"array_2"})) {
 			for (const auto &iter2 : iter1) {
-				resultForArray2[iter2.first].push_back(
-					any_cast<int64_t>(iter2.second));
+				resultForArray2[iter2.first].push_back(any_cast<int64_t>(iter2.second));
 			}
 		}
 		EXPECT_TRUE(resultForArray2 == answerForArray2);
@@ -146,8 +145,7 @@ void check_contents2(const Json &json, const bool &doParsing) {
 		EXPECT_TRUE(json.WhetherTheKeyExists({"BODY", "string_1"}));
 		EXPECT_FALSE(json.IsType<nullptr_t>({"BODY", "string_1"}));
 		EXPECT_TRUE(json.IsType<string>({"BODY", "string_1"}));
-		EXPECT_STREQ(json.GetValue<string>({"BODY", "string_1"}).c_str(),
-					 "string_1");
+		EXPECT_STREQ(json.GetValue<string>({"BODY", "string_1"}).c_str(), "string_1");
 
 		EXPECT_TRUE(json.WhetherTheKeyExists({"BODY", "null_1"}));
 		EXPECT_FALSE(json.IsType<int64_t>({"BODY", "null_1"}));

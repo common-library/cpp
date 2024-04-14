@@ -16,8 +16,7 @@ using namespace std;
 
 ParentProcess::ParentProcess(const bool &standAlone, const string &binaryName,
 							 vector<unique_ptr<ChildProcess>> &processes)
-	: pidFD(-1), standAlone(standAlone), binaryName(binaryName), stop(false),
-	  pid(getpid()) {
+	: pidFD(-1), standAlone(standAlone), binaryName(binaryName), stop(false), pid(getpid()) {
 	for (auto &process : processes) {
 		this->processes.push_back(move(process));
 	}
@@ -49,20 +48,17 @@ bool ParentProcess::InitializeSignal() {
 	Signal::Instance().Add(SIGPIPE, SIG_IGN);
 	Signal::Instance().Add(SIGURG, SIG_IGN);
 
-	Signal::Instance().Add(SIGCHLD, [this](int signalValue) {
-		this->SignalHandlerChild(signalValue);
-	});
+	Signal::Instance().Add(SIGCHLD,
+						   [this](int signalValue) { this->SignalHandlerChild(signalValue); });
 
-	Signal::Instance().Add(SIGTERM, [this](int signalValue) {
-		this->SignalHandlerTerm(signalValue);
-	});
+	Signal::Instance().Add(SIGTERM,
+						   [this](int signalValue) { this->SignalHandlerTerm(signalValue); });
 
 	if (this->standAlone) {
 		Signal::Instance().Add(SIGINT, SIG_IGN);
 	} else {
-		Signal::Instance().Add(SIGINT, [this](int signalValue) {
-			this->SignalHandlerTerm(signalValue);
-		});
+		Signal::Instance().Add(SIGINT,
+							   [this](int signalValue) { this->SignalHandlerTerm(signalValue); });
 	}
 
 	return true;
@@ -89,8 +85,7 @@ bool ParentProcess::Finalize() {
 }
 
 bool ParentProcess::LockPidFile() {
-	const string path = FileManager::Instance().GetCurrentPath() + "/" +
-						this->binaryName + ".pid";
+	const string path = FileManager::Instance().GetCurrentPath() + "/" + this->binaryName + ".pid";
 
 	this->pidFD = FileManager::Instance().LockBetweenProcess(path);
 	if (this->pidFD == -1) {

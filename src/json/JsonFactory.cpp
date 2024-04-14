@@ -3,8 +3,6 @@
 #include "RapidjsonJson.h"
 #include <memory>
 
-using namespace std;
-
 unique_ptr<Json> JsonFactory::Make(const JSON_TYPE &type) {
 	switch (type) {
 	case JSON_TYPE::RABBIT:

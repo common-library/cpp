@@ -1,6 +1,5 @@
 #pragma once
 
-#include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <future>
@@ -40,25 +39,22 @@ class ThreadPool {
 		~ThreadPool();
 
 		template <class Func, class... Args>
-		future<typename result_of<Func(Args...)>::type> AddJob(Func &&func,
-															   Args &&...args);
+		future<typename result_of<Func(Args...)>::type> AddJob(Func &&func, Args &&...args);
 
 		size_t GetWaitingJobSize() const;
 		poolSizeType GetRunningJobSize() const;
 
 		poolSizeType GetPoolSize() const;
 		poolSizeType GetCurrentPoolSize() const;
-		void SetPoolSize(const poolSizeType &poolSize,
-						 const bool &async = true);
+		void SetPoolSize(const poolSizeType &poolSize, const bool &async = true);
 };
 
 template <class Func, class... Args>
-future<typename result_of<Func(Args...)>::type>
-ThreadPool::AddJob(Func &&func, Args &&...args) {
+future<typename result_of<Func(Args...)>::type> ThreadPool::AddJob(Func &&func, Args &&...args) {
 	using returnType = typename result_of<Func(Args...)>::type;
 
-	auto job = make_shared<packaged_task<returnType()>>(
-		bind(forward<Func>(func), forward<Args>(args)...));
+	auto job =
+		make_shared<packaged_task<returnType()>>(bind(forward<Func>(func), forward<Args>(args)...));
 
 	if (this->stop) {
 		(*job)();

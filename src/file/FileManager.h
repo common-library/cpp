@@ -17,8 +17,7 @@ class FileManager {
 		bool IsRegularFile(const string &path) const;
 		bool IsDirectory(const string &path) const;
 
-		int LockBetweenProcess(const string &path,
-							   const mode_t &mode = 0755) const;
+		int LockBetweenProcess(const string &path, const mode_t &mode = 0755) const;
 		bool LockBetweenProcess(const int &fd) const;
 		bool UnLockBetweenProcess(const int &fd) const;
 
@@ -30,8 +29,7 @@ class FileManager {
 		bool MakeDirs(const string &path) const;
 
 		bool Copy(const string &fromPath, const string &toPath,
-				  filesystem::copy_options options =
-					  filesystem::copy_options::none) const;
+				  filesystem::copy_options options = filesystem::copy_options::none) const;
 		bool CopyAll(const string &fromPath, const string &toPath) const;
 
 		bool Remove(const string &path) const;

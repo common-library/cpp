@@ -6,8 +6,6 @@
 #include <future>
 #include <thread>
 
-using namespace std;
-
 class ChildProcessForChild1 : public ChildProcess {
 	private:
 		virtual bool Initialize() override final { return false; }

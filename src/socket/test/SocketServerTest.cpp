@@ -14,10 +14,9 @@ TEST(SocketServerTest, Start) {
 	EXPECT_FALSE(socketServer.Start(0, 0, 0, nullptr));
 
 	for (int i = 0; i < 3; ++i) {
-		EXPECT_TRUE(socketServer.Start(
-			12345, 5, i, [greeting](const SocketClient &socketClient) {
-				EXPECT_TRUE(socketClient.Write(greeting));
-			}));
+		EXPECT_TRUE(socketServer.Start(12345, 5, i, [greeting](const SocketClient &socketClient) {
+			EXPECT_TRUE(socketClient.Write(greeting));
+		}));
 
 		vector<future<void>> futures{};
 		for (int j = 0; j < 100; ++j) {

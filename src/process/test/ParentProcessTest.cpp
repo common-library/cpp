@@ -58,8 +58,7 @@ bool test(int argc, char *argv[], int howToStop, int job) {
 			EXPECT_TRUE(environmentVariable.Initialize(argc, argv));
 
 			ParentProcess parentProcess(environmentVariable.GetStandAlone(),
-										environmentVariable.GetBinaryName(),
-										processes);
+										environmentVariable.GetBinaryName(), processes);
 
 			auto result = async(launch::async, [&parentProcess, &howToStop]() {
 				while (parentProcess.GetCondition() == false) {
@@ -101,8 +100,7 @@ TEST(ParentProcessTest, NonStandalone) {
 	GTEST_FLAG_SET(death_test_style, "threadsafe");
 
 	int argc = 3;
-	char *argv[] = {(char *)"non_standalone", (char *)"-c",
-					(char *)CONFIG_PATH.c_str()};
+	char *argv[] = {(char *)"non_standalone", (char *)"-c", (char *)CONFIG_PATH.c_str()};
 
 	EXPECT_TRUE(test(argc, argv, 1, 1));
 	EXPECT_TRUE(test(argc, argv, 2, 1));
@@ -112,8 +110,7 @@ TEST(ParentProcessTest, Standalone) {
 	GTEST_FLAG_SET(death_test_style, "threadsafe");
 
 	int argc = 4;
-	char *argv[] = {(char *)"standalone", (char *)"-c",
-					(char *)CONFIG_PATH.c_str(), (char *)"-s"};
+	char *argv[] = {(char *)"standalone", (char *)"-c", (char *)CONFIG_PATH.c_str(), (char *)"-s"};
 
 	EXPECT_TRUE(test(argc, argv, 1, 2));
 	EXPECT_TRUE(test(argc, argv, 2, 2));
@@ -123,8 +120,7 @@ TEST(ParentProcessTest, sigchld) {
 	GTEST_FLAG_SET(death_test_style, "threadsafe");
 
 	int argc = 3;
-	char *argv[] = {(char *)"non_standalone", (char *)"-c",
-					(char *)CONFIG_PATH.c_str()};
+	char *argv[] = {(char *)"non_standalone", (char *)"-c", (char *)CONFIG_PATH.c_str()};
 
 	EXPECT_TRUE(test(argc, argv, 2, 3));
 }

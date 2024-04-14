@@ -5,8 +5,6 @@
 #include <netinet/in.h>
 #include <thread>
 
-using namespace std;
-
 SocketServer::SocketServer() : fd(-1), start(false), threadPool(0) {}
 
 SocketServer::~SocketServer() { this->Stop(); }
@@ -51,8 +49,7 @@ bool SocketServer::Create() {
 		return false;
 	}
 
-	if (fcntl(this->fd, F_SETFL, fcntl(this->fd, F_GETFL, 0) | O_NONBLOCK) ==
-		-1) {
+	if (fcntl(this->fd, F_SETFL, fcntl(this->fd, F_GETFL, 0) | O_NONBLOCK) == -1) {
 		return false;
 	}
 
@@ -70,8 +67,7 @@ bool SocketServer::Bind(const in_port_t &port) {
 	sockAddrIn.sin_addr.s_addr = htonl(INADDR_ANY);
 	sockAddrIn.sin_port = htons(port);
 
-	const auto result =
-		bind(this->fd, (struct sockaddr *)&sockAddrIn, sizeof(sockAddrIn));
+	const auto result = bind(this->fd, (struct sockaddr *)&sockAddrIn, sizeof(sockAddrIn));
 
 	return result != -1 ? true : false;
 }
@@ -84,8 +80,7 @@ int SocketServer::Accept() {
 	struct sockaddr_in sSockaddr;
 	socklen_t sockLen = sizeof(sSockaddr);
 
-	const auto clientFD =
-		accept(this->fd, (struct sockaddr *)&sSockaddr, &sockLen);
+	const auto clientFD = accept(this->fd, (struct sockaddr *)&sSockaddr, &sockLen);
 	if (clientFD != -1) {
 		return clientFD;
 	}
@@ -101,9 +96,8 @@ int SocketServer::Accept() {
 	return -1;
 }
 
-bool SocketServer::Start(
-	const in_port_t &port, const int &timeout, const poolSizeType &poolSize,
-	const function<void(const SocketClient &socketClient)> &job) {
+bool SocketServer::Start(const in_port_t &port, const int &timeout, const poolSizeType &poolSize,
+						 const function<void(const SocketClient &socketClient)> &job) {
 	if (this->start) {
 		this->Stop();
 	}
@@ -123,8 +117,7 @@ bool SocketServer::Start(
 				continue;
 			}
 
-			this->threadPool.AddJob(
-				[=]() { job(SocketClient(clientFD, timeout)); });
+			this->threadPool.AddJob([=]() { job(SocketClient(clientFD, timeout)); });
 		}
 	});
 

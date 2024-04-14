@@ -10,8 +10,7 @@ TEST(SignalTest, Add) {
 	atomic_bool condition = true;
 
 	Signal::Instance().Add(SIGINT, SIG_IGN);
-	Signal::Instance().Add(SIGTERM,
-						   [&condition](int) { condition.store(false); });
+	Signal::Instance().Add(SIGTERM, [&condition](int) { condition.store(false); });
 
 	while (condition) {
 		EXPECT_EQ(kill(getpid(), SIGTERM), 0);

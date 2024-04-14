@@ -9,14 +9,14 @@
 using namespace std;
 
 DualIp::DualIp(const sockaddr_storage &sockAddrStorage)
-	: address(""), port(0), ipType(IP_TYPE::NOTMATCHED), inAddr({}),
-	  in6Addr({}), addrInfo(nullptr) {
+	: address(""), port(0), ipType(IP_TYPE::NOTMATCHED), inAddr({}), in6Addr({}),
+	  addrInfo(nullptr) {
 	this->Initialize(sockAddrStorage);
 }
 
 DualIp::DualIp(const string &address, const in_port_t &port)
-	: address(address), port(port), ipType(IP_TYPE::NOTMATCHED), inAddr({}),
-	  in6Addr({}), addrInfo(nullptr) {
+	: address(address), port(port), ipType(IP_TYPE::NOTMATCHED), inAddr({}), in6Addr({}),
+	  addrInfo(nullptr) {
 	this->Initialize(this->address);
 }
 
@@ -29,8 +29,7 @@ bool DualIp::Initialize(const string &address) {
 		return this->AddressToStruct(address) && this->Valid();
 	}
 
-	addrinfo *addrInfo =
-		this->GetAddrInfo(address, 0, AF_UNSPEC, SOCK_STREAM, AI_CANONNAME);
+	addrinfo *addrInfo = this->GetAddrInfo(address, 0, AF_UNSPEC, SOCK_STREAM, AI_CANONNAME);
 
 	addrinfo *addrInfoTemp = addrInfo;
 	while (addrInfoTemp) {
@@ -50,8 +49,7 @@ bool DualIp::Initialize(const string &address) {
 		if (addr) {
 			char addressTemp[INET6_ADDRSTRLEN];
 			memset(addressTemp, 0x00, sizeof(addressTemp));
-			if (inet_ntop(addrInfoTemp->ai_family, addr, addressTemp,
-						  sizeof(addressTemp))) {
+			if (inet_ntop(addrInfoTemp->ai_family, addr, addressTemp, sizeof(addressTemp))) {
 				this->AddressToStruct(addressTemp);
 				break;
 			}
@@ -219,15 +217,14 @@ addrinfo *DualIp::GetAddrInfo() {
 		return this->addrInfo;
 	}
 
-	this->addrInfo = this->GetAddrInfo(this->StructToAddress(), this->port,
-									   AF_UNSPEC, SOCK_STREAM, 0);
+	this->addrInfo =
+		this->GetAddrInfo(this->StructToAddress(), this->port, AF_UNSPEC, SOCK_STREAM, 0);
 
 	return this->addrInfo;
 }
 
-addrinfo *DualIp::GetAddrInfo(const string &address, const in_port_t &port,
-							  const int &family, const int &sockType,
-							  const int &flags) const {
+addrinfo *DualIp::GetAddrInfo(const string &address, const in_port_t &port, const int &family,
+							  const int &sockType, const int &flags) const {
 	addrinfo addrInfoTemp;
 	memset(&addrInfoTemp, 0, sizeof(addrInfoTemp));
 
@@ -241,8 +238,8 @@ addrinfo *DualIp::GetAddrInfo(const string &address, const in_port_t &port,
 
 	addrinfo *addrInfo = nullptr;
 
-	const int result = getaddrinfo(address.c_str(), to_string(port).c_str(),
-								   &addrInfoTemp, &addrInfo);
+	const int result =
+		getaddrinfo(address.c_str(), to_string(port).c_str(), &addrInfoTemp, &addrInfo);
 
 	return result == 0 ? addrInfo : nullptr;
 }

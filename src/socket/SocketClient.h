@@ -37,8 +37,7 @@ class SocketClient {
 
 	public:
 		SocketClient(const int &fd, const int &timeout);
-		SocketClient(const string &address, const in_port_t &port,
-					 const int &timeout);
+		SocketClient(const string &address, const in_port_t &port, const int &timeout);
 		virtual ~SocketClient();
 
 		tuple<bool, string> Read(const int &readSize, bool &end) const;

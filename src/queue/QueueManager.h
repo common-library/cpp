@@ -21,8 +21,7 @@ class QueueManager {
 		map<string, unique_ptr<mutex>> mutexByKey;
 		map<string, unique_ptr<any>> queueByKey;
 
-		template <typename T>
-		tuple<mutex *, queue<T> *> GetQueue(const string &key);
+		template <typename T> tuple<mutex *, queue<T> *> GetQueue(const string &key);
 
 	public:
 		template <typename T> T &Front(const string &key);
@@ -31,8 +30,7 @@ class QueueManager {
 
 		template <typename T> void Push(const string &key, auto data);
 
-		template <typename T, typename... Args>
-		auto Emplace(const string &key, Args &&...args);
+		template <typename T, typename... Args> auto Emplace(const string &key, Args &&...args);
 
 		template <typename T> void Pop(const string &key);
 
@@ -48,8 +46,7 @@ class QueueManager {
 		static QueueManager &Instance();
 };
 
-template <typename T>
-tuple<mutex *, queue<T> *> QueueManager::GetQueue(const string &key) {
+template <typename T> tuple<mutex *, queue<T> *> QueueManager::GetQueue(const string &key) {
 	lock_guard<mutex> lock(this->mutexForKey);
 
 	if (this->mutexByKey.find(key) == this->mutexByKey.end()) {
@@ -60,8 +57,7 @@ tuple<mutex *, queue<T> *> QueueManager::GetQueue(const string &key) {
 		this->queueByKey[key] = make_unique<any>(make_any<queue<T>>());
 	}
 
-	return make_tuple(this->mutexByKey[key].get(),
-					  any_cast<queue<T>>(this->queueByKey[key].get()));
+	return make_tuple(this->mutexByKey[key].get(), any_cast<queue<T>>(this->queueByKey[key].get()));
 }
 
 template <typename T> T &QueueManager::Front(const string &key) {
@@ -107,8 +103,7 @@ template <typename T> void QueueManager::Pop(const string &key) {
 	}
 }
 
-template <typename T>
-void QueueManager::Swap(const string &key, queue<T> &swap) {
+template <typename T> void QueueManager::Swap(const string &key, queue<T> &swap) {
 	auto info = this->GetQueue<T>(key);
 
 	lock_guard<mutex> lock(*get<0>(info));

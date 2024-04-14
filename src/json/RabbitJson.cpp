@@ -79,10 +79,9 @@ vector<map<string, any>> RabbitJson::GetArray(const vector<string> &key) const {
 		map<string, any> temp{};
 
 		if (iter1.is_object()) {
-			for (auto iter2 = iter1.member_begin(); iter2 != iter1.member_end();
-				 ++iter2) {
-				temp[iter2->name()] = this->GetValueDerived(
-					make_any<rabbit::object>(iter2->value()));
+			for (auto iter2 = iter1.member_begin(); iter2 != iter1.member_end(); ++iter2) {
+				temp[iter2->name()] =
+					this->GetValueDerived(make_any<rabbit::object>(iter2->value()));
 			}
 		} else {
 			temp[""] = this->GetValueDerived(make_any<rabbit::object>(iter1));

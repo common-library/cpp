@@ -1,7 +1,7 @@
+#pragma once
+
 #include "Json.h"
 #include <memory>
-
-using namespace std;
 
 enum class JSON_TYPE {
 	RABBIT,

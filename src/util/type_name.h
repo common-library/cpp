@@ -6,8 +6,6 @@
 
 using namespace std;
 
-// template <typename T> string type_name();
-
 #if __cplusplus == 199711L
 template <typename T> string type_name() {
 	const string s = __PRETTY_FUNCTION__;

@@ -11,16 +11,15 @@ static const string message = "message\r\n";
 TEST(SocketClientTest, Read) {
 	SocketServer socketServer;
 
-	EXPECT_TRUE(
-		socketServer.Start(12345, 5, 10, [](const SocketClient &socketClient) {
-			EXPECT_TRUE(socketClient.Write(greeting));
+	EXPECT_TRUE(socketServer.Start(12345, 5, 10, [](const SocketClient &socketClient) {
+		EXPECT_TRUE(socketClient.Write(greeting));
 
-			bool end = false;
-			const auto result = socketClient.Read(1024, end);
-			EXPECT_TRUE(end);
-			EXPECT_TRUE(get<0>(result));
-			EXPECT_STREQ(get<1>(result).c_str(), message.c_str());
-		}));
+		bool end = false;
+		const auto result = socketClient.Read(1024, end);
+		EXPECT_TRUE(end);
+		EXPECT_TRUE(get<0>(result));
+		EXPECT_STREQ(get<1>(result).c_str(), message.c_str());
+	}));
 
 	SocketClient socketClient("127.0.0.1", 12345, 5);
 
@@ -36,16 +35,15 @@ TEST(SocketClientTest, Read) {
 TEST(SocketClientTest, Write) {
 	SocketServer socketServer;
 
-	EXPECT_TRUE(
-		socketServer.Start(12345, 5, 10, [](const SocketClient &socketClient) {
-			EXPECT_TRUE(socketClient.Write(greeting));
+	EXPECT_TRUE(socketServer.Start(12345, 5, 10, [](const SocketClient &socketClient) {
+		EXPECT_TRUE(socketClient.Write(greeting));
 
-			bool end = false;
-			const auto result = socketClient.Read(1024, end);
-			EXPECT_TRUE(end);
-			EXPECT_TRUE(get<0>(result));
-			EXPECT_STREQ(get<1>(result).c_str(), message.c_str());
-		}));
+		bool end = false;
+		const auto result = socketClient.Read(1024, end);
+		EXPECT_TRUE(end);
+		EXPECT_TRUE(get<0>(result));
+		EXPECT_STREQ(get<1>(result).c_str(), message.c_str());
+	}));
 
 	SocketClient socketClient("127.0.0.1", 12345, 5);
 
@@ -61,10 +59,9 @@ TEST(SocketClientTest, Write) {
 TEST(SocketClientTest, ReadGarbage) {
 	SocketServer socketServer;
 
-	EXPECT_TRUE(
-		socketServer.Start(12345, 5, 10, [](const SocketClient &socketClient) {
-			EXPECT_TRUE(socketClient.Write(greeting));
-		}));
+	EXPECT_TRUE(socketServer.Start(12345, 5, 10, [](const SocketClient &socketClient) {
+		EXPECT_TRUE(socketClient.Write(greeting));
+	}));
 
 	SocketClient socketClient("127.0.0.1", 12345, 5);
 
@@ -89,12 +86,11 @@ TEST(SocketClientTest, ReadGarbage) {
 TEST(SocketClientTest, GetPeerAddress) {
 	SocketServer socketServer;
 
-	EXPECT_TRUE(
-		socketServer.Start(12345, 5, 10, [](const SocketClient &socketClient) {
-			EXPECT_STREQ(socketClient.GetPeerAddress().c_str(), "127.0.0.1");
+	EXPECT_TRUE(socketServer.Start(12345, 5, 10, [](const SocketClient &socketClient) {
+		EXPECT_STREQ(socketClient.GetPeerAddress().c_str(), "127.0.0.1");
 
-			EXPECT_TRUE(socketClient.Write(greeting));
-		}));
+		EXPECT_TRUE(socketClient.Write(greeting));
+	}));
 
 	SocketClient socketClient("127.0.0.1", 12345, 5);
 
@@ -106,12 +102,11 @@ TEST(SocketClientTest, GetPeerAddress) {
 TEST(SocketClientTest, GetPeerPort) {
 	SocketServer socketServer;
 
-	EXPECT_TRUE(
-		socketServer.Start(12345, 5, 10, [](const SocketClient &socketClient) {
-			EXPECT_NE(socketClient.GetPeerPort(), 0);
+	EXPECT_TRUE(socketServer.Start(12345, 5, 10, [](const SocketClient &socketClient) {
+		EXPECT_NE(socketClient.GetPeerPort(), 0);
 
-			EXPECT_TRUE(socketClient.Write(greeting));
-		}));
+		EXPECT_TRUE(socketClient.Write(greeting));
+	}));
 
 	SocketClient socketClient("127.0.0.1", 12345, 5);
 
